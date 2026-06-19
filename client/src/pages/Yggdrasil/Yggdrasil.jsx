@@ -25,6 +25,7 @@ function Yggdrasil() {
       rune: 'ᚨ ᛚ ᚠ ᚺ ᛖ ᛁ ᛗ',
       symbolColor: '#7EB8F7',
       nature: 'Light Elves · Sky · Wonder',
+      image: '/alfheim.png'
     },
     {
       id: 'valhalla',
@@ -39,6 +40,7 @@ function Yggdrasil() {
       rune: 'ᚹ ᚨ ᛚ ᚺ ᚨ ᛚ ᛚ ᚨ',
       symbolColor: '#C084FC',
       nature: 'Warriors · Glory · Eternity',
+      image: '/valhalla.png'
     },
     {
       id: 'midgard',
@@ -53,6 +55,7 @@ function Yggdrasil() {
       rune: 'ᛗ ᛁ ᛞ ᚷ ᚨ ᚱ ᛞ',
       symbolColor: '#F4A261',
       nature: 'Mortals · Fire · Truth',
+      image: '/midgard.png'
     }
   ]
 
@@ -303,6 +306,16 @@ function RealmCard({ realm, delay, visible, onClick }) {
         overflow: 'hidden',
       }}
     >
+      {/* Hover background image */}
+      <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `url(${realm.image})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: hovered ? 0.18 : 0,
+          transition: 'opacity 0.5s ease',
+          pointerEvents: 'none',
+      }} />
       {/* Corner ornaments */}
       <div style={{
         position: 'absolute', top: '10px', left: '10px',
