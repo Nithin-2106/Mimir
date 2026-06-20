@@ -5,7 +5,7 @@ import SearchPage from './SearchPage'
 import InfoPage from './InfoPage'
 import Counter from '../../components/Counter'
 import MyList from './MyList'
-
+import Dashboad from './Dashboard'
 
 const API = 'http://localhost:5000/api/drama'
 
