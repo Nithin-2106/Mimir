@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 
 const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
@@ -8,29 +8,37 @@ const API       = 'http://localhost:5000/api/drama'
 
 const C = {
   bg:           '#080D1A',
-  surface:      '#0F1829',
-  surfaceHover: '#141F33',
+  surface:      '#0D1526',
+  surfaceHover: '#111E33',
   input:        '#0A1220',
+  ember:        '#C2410C',
+  emberSoft:    'rgba(194,65,12,0.15)',
   gold:         '#CA8A04',
   goldBright:   '#F59E0B',
   goldSoft:     'rgba(202,138,4,0.15)',
   electric:     '#38BDF8',
-  electricSoft: 'rgba(56,189,248,0.12)',
+  electricSoft: 'rgba(56,189,248,0.1)',
   violet:       '#7C3AED',
   violetSoft:   'rgba(124,58,237,0.15)',
-  ember:        '#C2410C',
-  emberSoft:    'rgba(194,65,12,0.15)',
   green:        '#22C55E',
   greenSoft:    'rgba(34,197,94,0.12)',
   red:          '#EF4444',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderGold:   'rgba(202,138,4,0.2)',
-  borderElec:   'rgba(56,189,248,0.15)',
+  redSoft:      'rgba(239,68,68,0.12)',
+  text:         '#F0F4FC',
+  textMuted:    '#9BAFC8',
+  textDim:      '#4A607A',
+  borderGold:   'rgba(202,138,4,0.25)',
+  borderElec:   'rgba(56,189,248,0.2)',
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const STATUS_CONFIG = {
+  'Watching':      { color: '#38BDF8', icon: '▶', rune: 'ᚹ' },
+  'Completed':     { color: '#22C55E', icon: '✓', rune: 'ᚲ' },
+  'Dropped':       { color: '#EF4444', icon: '✕', rune: 'ᛞ' },
+  'Plan to Watch': { color: '#7C3AED', icon: '◷', rune: 'ᛈ' },
+  'On Hold':       { color: '#F59E0B', icon: '⏸', rune: 'ᛟ' },
+}
+
 function detectType(item) {
   const origin = (item.origin_country || []).map(c => c.toUpperCase())
   if (origin.includes('KR')) return 'Kdrama'
@@ -38,7 +46,6 @@ function detectType(item) {
   if (origin.includes('JP')) return 'Jdrama'
   return 'Kdrama'
 }
-
 function typeColor(type) {
   if (type === 'Kdrama') return C.electric
   if (type === 'Cdrama') return C.violet
@@ -46,18 +53,6 @@ function typeColor(type) {
   return C.electric
 }
 
-function statusColor(status) {
-  const map = {
-    'Watching':      C.electric,
-    'Completed':     C.green,
-    'Dropped':       C.red,
-    'Plan to Watch': C.violet,
-    'On Hold':       C.goldBright,
-  }
-  return map[status] || C.textMuted
-}
-
-// ── Corner ornaments ──────────────────────────────────────────────────────────
 function Corners({ color = C.goldBright, size = 12, opacity = 0.5 }) {
   const s = { position: 'absolute', width: size, height: size, opacity }
   const b = `1px solid ${color}`
@@ -71,505 +66,112 @@ function Corners({ color = C.goldBright, size = 12, opacity = 0.5 }) {
   )
 }
 
-// ── Loading spinner ───────────────────────────────────────────────────────────
 function Spinner() {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', gap: '20px',
-    }}>
-      <div style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '28px', color: C.gold + '44',
-        letterSpacing: '0.4em',
-        animation: 'pulse 1.5s ease-in-out infinite',
-      }}>ᛟ</div>
-      <div style={{
-        fontSize: '11px', letterSpacing: '0.3em',
-        color: C.textDim, fontFamily: '"Cinzel", serif',
-        textTransform: 'uppercase',
-      }}>Loading...</div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }`}</style>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px' }}>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', color: '#CA8A04', letterSpacing: '0.4em', animation: 'pulse 1.5s ease-in-out infinite' }}>ᛟ</div>
+      <div style={{ fontSize: '11px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase' }}>Loading...</div>
+      <style>{`@keyframes pulse{0%,100%{opacity:0.2}50%{opacity:1}}`}</style>
     </div>
   )
 }
 
-// ── Badge ─────────────────────────────────────────────────────────────────────
-function Badge({ label, color }) {
+function SectionDivider({ title, rune, right }) {
   return (
-    <span style={{
-      fontSize: '10px', letterSpacing: '0.15em',
-      color: color || C.textMuted,
-      padding: '4px 10px',
-      border: `1px solid ${(color || C.textMuted) + '55'}`,
-      background: (color || C.textMuted) + '0f',
-      fontFamily: '"Cinzel", serif',
-      whiteSpace: 'nowrap',
-    }}>
-      {label}
-    </span>
-  )
-}
-
-// ── Section header ────────────────────────────────────────────────────────────
-function SectionHeader({ title, rune }) {
-  return (
-    <div style={{ marginBottom: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {rune && <span style={{ fontFamily: '"Cinzel", serif', fontSize: '15px', color: C.gold + '77' }}>{rune}</span>}
-        <h3 style={{
-          fontFamily: '"Cinzel", serif',
-          fontSize: '12px', fontWeight: 600,
-          letterSpacing: '0.3em', color: C.text,
-          margin: 0, textTransform: 'uppercase',
-        }}>{title}</h3>
-      </div>
-      <div style={{
-        height: '1px', marginTop: '12px',
-        background: `linear-gradient(to right, ${C.gold}44, ${C.electric}22, transparent)`,
-      }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
+      {rune && <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: '#CA8A04' }}>{rune}</span>}
+      <h3 style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.35em', color: '#F59E0B', margin: 0, textTransform: 'uppercase' }}>
+        {title}
+      </h3>
+      <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, rgba(202,138,4,0.4), transparent)' }} />
+      {right && <span style={{ fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>{right}</span>}
     </div>
   )
 }
 
-// ── Interactive Rating Slider ─────────────────────────────────────────────────
 function RatingSlider({ value, onChange }) {
   const [hovered, setHovered] = useState(null)
   const steps = []
   for (let i = 1; i <= 10; i += 0.5) steps.push(i)
-
   const display = hovered !== null ? hovered : value
-
   const ratingColor = (r) => {
     if (!r) return C.textDim
-    if (r >= 8)  return C.green
-    if (r >= 6)  return C.goldBright
-    if (r >= 4)  return C.ember
+    if (r >= 8) return C.green
+    if (r >= 6) return C.goldBright
+    if (r >= 4) return C.ember
     return C.red
   }
-
   return (
     <div>
-      {/* Big number display */}
-      <div style={{
-        display: 'flex', alignItems: 'baseline', gap: '6px',
-        marginBottom: '16px',
-      }}>
-        <span style={{
-          fontFamily: '"Cinzel", serif',
-          fontSize: '48px', fontWeight: 700,
-          color: ratingColor(display),
-          textShadow: display ? `0 0 30px ${ratingColor(display)}66` : 'none',
-          lineHeight: 1,
-          transition: 'all 0.15s ease',
-        }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '14px' }}>
+        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '42px', fontWeight: 700, color: ratingColor(display), lineHeight: 1, transition: 'all 0.15s' }}>
           {display || '—'}
         </span>
-        <span style={{ fontSize: '14px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>/10</span>
+        <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>/10</span>
       </div>
-
-      {/* Slider dots */}
-      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
         {steps.map(step => {
           const isActive = value && step <= value
           const isHov    = hovered !== null && step <= hovered
           const col      = ratingColor(step)
           return (
-            <button
-              key={step}
+            <button key={step}
               onClick={() => onChange(value === step ? null : step)}
               onMouseEnter={() => setHovered(step)}
               onMouseLeave={() => setHovered(null)}
               title={step.toString()}
-              style={{
-                width: step % 1 === 0 ? '28px' : '14px',
-                height: '28px',
-                background: (isHov || isActive) ? col : C.surface,
-                border: `1px solid ${(isHov || isActive) ? col : C.borderGold}`,
-                cursor: 'pointer',
-                transition: 'all 0.12s ease',
-                boxShadow: (isHov || isActive) ? `0 0 8px ${col}66` : 'none',
-                position: 'relative',
-              }}
+              style={{ width: step % 1 === 0 ? '26px' : '13px', height: '26px', background: (isHov || isActive) ? col : C.surface, border: `1px solid ${(isHov || isActive) ? col : C.borderGold}`, cursor: 'pointer', transition: 'all 0.1s', position: 'relative' }}
             >
               {step % 1 === 0 && (
-                <span style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '9px', fontFamily: '"Cinzel", serif',
-                  color: (isHov || isActive) ? C.bg : C.textDim,
-                  fontWeight: 700,
-                }}>
-                  {step}
-                </span>
+                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>{step}</span>
               )}
             </button>
           )
         })}
       </div>
-
-      {/* Clear button */}
       {value && (
-        <button
-          onClick={() => onChange(null)}
-          style={{
-            marginTop: '10px',
-            fontSize: '10px', letterSpacing: '0.15em',
-            color: C.textDim, background: 'transparent',
-            border: 'none', cursor: 'pointer',
-            fontFamily: '"Cinzel", serif',
-            padding: 0,
-          }}
+        <button onClick={() => onChange(null)} style={{ marginTop: '8px', fontSize: '10px', letterSpacing: '0.15em', color: C.textDim, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: '"Cinzel", serif', padding: 0 }}
           onMouseEnter={e => e.currentTarget.style.color = C.red}
           onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-        >
-          × Clear rating
-        </button>
+        >× Clear rating</button>
       )}
     </div>
   )
 }
 
-// ── Cast card ─────────────────────────────────────────────────────────────────
-function CastCard({ person }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        width: '100px', flexShrink: 0,
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-        transition: 'transform 0.25s ease',
-      }}
-    >
-      <div style={{
-        width: '100px', height: '130px',
-        background: C.surface,
-        border: `1px solid ${hovered ? C.electric + '66' : C.borderGold}`,
-        overflow: 'hidden',
-        position: 'relative',
-        transition: 'border-color 0.25s',
-      }}>
-        {person.profile_path ? (
-          <img
-            src={`${IMG_BASE}/w185${person.profile_path}`}
-            alt={person.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: C.textDim, fontSize: '28px',
-            background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
-          }}>👤</div>
-        )}
-        {hovered && <Corners color={C.electric} size={8} opacity={0.6} />}
-      </div>
-      <div style={{
-        marginTop: '6px',
-        fontSize: '11px', fontWeight: 600,
-        color: hovered ? C.text : C.textMuted,
-        transition: 'color 0.25s',
-        lineHeight: 1.3,
-        overflow: 'hidden',
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-      }}>
-        {person.name}
-      </div>
-      <div style={{
-        fontSize: '10px', color: C.textDim,
-        marginTop: '2px', lineHeight: 1.3,
-        overflow: 'hidden',
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        fontStyle: 'italic',
-      }}>
-        {person.character}
-      </div>
-    </div>
-  )
-}
-
-// ── Image lightbox ────────────────────────────────────────────────────────────
-function ImageGrid({ images, type = 'backdrop' }) {
-  const [lightbox, setLightbox] = useState(null)
-  const [showAll, setShowAll]   = useState(false)
-  const [hov, setHov]           = useState(null)
-
-  const list    = images || []
-  const visible = showAll ? list : list.slice(0, 8)
-  const isBack  = type === 'backdrop'
-
-  return (
-    <div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isBack
-          ? 'repeat(auto-fill, minmax(200px, 1fr))'
-          : 'repeat(auto-fill, minmax(110px, 1fr))',
-        gap: '8px',
-      }}>
-        {visible.map((img, i) => {
-          const src = isBack ? img.file_path : img.file_path
-          const w   = isBack ? 'w300' : 'w154'
-          return (
-            <div
-              key={i}
-              onClick={() => setLightbox(`${IMG_BASE}/original${src}`)}
-              onMouseEnter={() => setHov(i)}
-              onMouseLeave={() => setHov(null)}
-              style={{
-                aspectRatio: isBack ? '16/9' : '2/3',
-                overflow: 'hidden',
-                cursor: 'pointer',
-                border: `1px solid ${hov === i ? C.electric + '66' : C.borderGold}`,
-                transition: 'all 0.2s ease',
-                transform: hov === i ? 'scale(1.02)' : 'scale(1)',
-              }}
-            >
-              <img
-                src={`${IMG_BASE}/${w}${src}`}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      {list.length > 8 && (
-        <button
-          onClick={() => setShowAll(s => !s)}
-          style={{
-            marginTop: '14px',
-            fontFamily: '"Cinzel", serif',
-            fontSize: '11px', letterSpacing: '0.2em',
-            color: C.electric, background: 'transparent',
-            border: `1px solid ${C.electric}44`,
-            padding: '8px 20px', cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = C.electricSoft}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          {showAll ? `▲ Show Less` : `▼ Show All ${list.length}`}
-        </button>
-      )}
-
-      {/* Lightbox */}
-      {lightbox && (
-        <div
-          onClick={() => setLightbox(null)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 999,
-            background: 'rgba(5,10,20,0.95)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'zoom-out',
-          }}
-        >
-          <img
-            src={lightbox}
-            alt=""
-            style={{
-              maxWidth: '90vw', maxHeight: '90vh',
-              objectFit: 'contain',
-              border: `1px solid ${C.borderGold}`,
-            }}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Trailer row ───────────────────────────────────────────────────────────────
-function TrailerRow({ videos }) {
-  const [active, setActive] = useState(null)
-  const trailers = (videos || []).filter(v => v.site === 'YouTube')
-
-  if (!trailers.length) return (
-    <div style={{ color: C.textDim, fontSize: '13px', letterSpacing: '0.05em' }}>
-      No trailers available
-    </div>
-  )
-
-  return (
-    <div>
-      {/* Thumbnail row */}
-      <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-        {trailers.map(v => (
-          <div
-            key={v.key}
-            onClick={() => setActive(active === v.key ? null : v.key)}
-            style={{
-              flexShrink: 0, cursor: 'pointer',
-              width: '200px',
-            }}
-          >
-            <div style={{
-              position: 'relative',
-              height: '112px',
-              border: `1px solid ${active === v.key ? C.electric + '88' : C.borderGold}`,
-              overflow: 'hidden',
-              transition: 'border-color 0.2s',
-            }}>
-              <img
-                src={`https://img.youtube.com/vi/${v.key}/mqdefault.jpg`}
-                alt={v.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-              {/* Play overlay */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(8,13,26,0.5)',
-              }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '50%',
-                  background: active === v.key ? C.electric : 'rgba(56,189,248,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px',
-                  transition: 'background 0.2s',
-                }}>▶</div>
-              </div>
-            </div>
-            <div style={{
-              marginTop: '6px', fontSize: '11px',
-              color: active === v.key ? C.electric : C.textMuted,
-              lineHeight: 1.3,
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              transition: 'color 0.2s',
-            }}>
-              {v.name}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Embedded player */}
-      {active && (
-        <div style={{ marginTop: '16px', position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-          <iframe
-            src={`https://www.youtube.com/embed/${active}?autoplay=1`}
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: '100%', height: '100%',
-              border: `1px solid ${C.borderElec}`,
-            }}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            title="trailer"
-          />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Form field wrapper ────────────────────────────────────────────────────────
-function Field({ label, rune, children }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <label style={{
-        fontSize: '10px', letterSpacing: '0.3em',
-        color: C.textMuted, textTransform: 'uppercase',
-        fontFamily: '"Cinzel", serif',
-        display: 'flex', alignItems: 'center', gap: '8px',
-      }}>
-        {rune && <span style={{ color: C.gold + '88', fontSize: '13px' }}>{rune}</span>}
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
-
-const inputStyle = {
-  width: '100%', padding: '10px 13px',
-  background: C.input,
-  border: `1px solid ${C.borderGold}`,
-  color: C.text, fontSize: '13px',
-  fontFamily: 'inherit', outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.2s, box-shadow 0.2s',
-}
-
-function FInput({ style, ...props }) {
-  const [f, setF] = useState(false)
-  return (
-    <input {...props}
-      onFocus={e => { setF(true); props.onFocus?.(e) }}
-      onBlur={e => { setF(false); props.onBlur?.(e) }}
-      style={{ ...inputStyle, borderColor: f ? C.electric + '88' : C.borderGold, boxShadow: f ? `0 0 14px ${C.electricSoft}` : 'none', ...style }}
-    />
-  )
-}
-
-function FSelect({ children, style, ...props }) {
-  const [f, setF] = useState(false)
-  return (
-    <select {...props}
-      onFocus={() => setF(true)} onBlur={() => setF(false)}
-      style={{ ...inputStyle, borderColor: f ? C.electric + '88' : C.borderGold, boxShadow: f ? `0 0 14px ${C.electricSoft}` : 'none', cursor: 'pointer', ...style }}
-    >
-      {children}
-    </select>
-  )
-}
-
-function FTextarea({ style, ...props }) {
-  const [f, setF] = useState(false)
-  return (
-    <textarea {...props}
-      onFocus={() => setF(true)} onBlur={() => setF(false)}
-      style={{ ...inputStyle, borderColor: f ? C.electric + '88' : C.borderGold, boxShadow: f ? `0 0 14px ${C.electricSoft}` : 'none', resize: 'vertical', minHeight: '80px', ...style }}
-    />
-  )
-}
-
-// ── My Entry form ─────────────────────────────────────────────────────────────
-function MyEntryForm({ tmdbData, existingEntry, onSaved }) {
+function AddToListModal({ tmdbData, existingEntry, onClose, onSaved, onDeleted }) {
   const type = detectType(tmdbData)
+  const year = tmdbData.first_air_date ? tmdbData.first_air_date.split('-')[0] : null
+  const poster = tmdbData.poster_path ? `${IMG_BASE}/w500${tmdbData.poster_path}` : ''
 
   const buildDefault = () => ({
-    title:         tmdbData.name || tmdbData.original_name || '',
-    coverImage:    tmdbData.poster_path ? `${IMG_BASE}/w500${tmdbData.poster_path}` : '',
-    status:        'Plan to Watch',
+    title:        tmdbData.name || tmdbData.original_name || '',
+    coverImage:   poster,
+    status:       'Plan to Watch',
     type,
-    format:        (tmdbData.number_of_seasons > 1 || !tmdbData.number_of_episodes) ? 'Series' : 'Series',
-    rating:        null,
-    episodes:      { current: 0, total: tmdbData.number_of_episodes || null },
-    year:          tmdbData.first_air_date ? parseInt(tmdbData.first_air_date.split('-')[0]) : null,
-    genres:        (tmdbData.genres || []).map(g => g.name),
-    review:        '',
-    rewatchCount:  0,
+    format:       'Series',
+    rating:       null,
+    episodes:     { current: 0, total: tmdbData.number_of_episodes || null },
+    year:         year ? parseInt(year) : null,
+    genres:       (tmdbData.genres || []).map(g => g.name),
+    review:       '',
+    rewatchCount: 0,
     dateStarted:   null,
     dateCompleted: null,
-    platforms:     [],
-    customTags:    [],
+    platforms:    [],
+    customTags:   [],
   })
 
-  const [form, setForm]               = useState(existingEntry || buildDefault())
-  const [coverOverride, setCoverOver] = useState('')
-  const [genreInput, setGenreInput]   = useState((form.genres || []).join(', '))
-  const [tagInput, setTagInput]       = useState((form.customTags || []).join(', '))
-  const [platName, setPlatName]       = useState('')
-  const [platUrl, setPlatUrl]         = useState('')
-  const [saving, setSaving]           = useState(false)
-  const [saved, setSaved]             = useState(false)
-  const [error, setError]             = useState('')
+  const [form, setForm]           = useState(existingEntry || buildDefault())
+  const [coverOverride, setCover] = useState('')
+  const [platName, setPlatName]   = useState('')
+  const [platUrl, setPlatUrl]     = useState('')
+  const [saving, setSaving]       = useState(false)
+  const [deleting, setDeleting]   = useState(false)
+  const [error, setError]         = useState('')
 
-  const set    = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const setEp  = (k, v) => setForm(f => ({ ...f, episodes: { ...f.episodes, [k]: v === '' ? null : Number(v) } }))
+  const set   = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const setEp = (k, v) => setForm(f => ({ ...f, episodes: { ...f.episodes, [k]: v === '' ? null : Number(v) } }))
   const coverSrc = coverOverride || form.coverImage
 
   const addPlat = () => {
@@ -583,713 +185,620 @@ function MyEntryForm({ tmdbData, existingEntry, onSaved }) {
     if (!form.title.trim()) { setError('Title is required'); return }
     setError(''); setSaving(true)
     try {
-      const payload = {
-        ...form,
-        coverImage:  coverSrc,
-        genres:      genreInput.split(',').map(g => g.trim()).filter(Boolean),
-        customTags:  tagInput.split(',').map(t => t.trim()).filter(Boolean),
-        rating:      form.rating ? Number(form.rating) : null,
-        year:        form.year ? Number(form.year) : null,
-        dateStarted:   form.dateStarted || null,
-        dateCompleted: form.dateCompleted || null,
-      }
+      const payload = { ...form, coverImage: coverSrc, rating: form.rating ? Number(form.rating) : null }
       if (existingEntry?._id) {
         await axios.put(`${API}/${existingEntry._id}`, payload)
       } else {
         await axios.post(API, payload)
       }
-      setSaved(true)
-      setTimeout(() => { setSaved(false); onSaved?.() }, 1500)
+      onSaved()
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed')
-    } finally {
       setSaving(false)
     }
   }
 
+  const handleDelete = async () => {
+    if (!existingEntry?._id) return
+    setDeleting(true)
+    try {
+      await axios.delete(`${API}/${existingEntry._id}`)
+      onDeleted()
+    } catch {
+      setError('Delete failed')
+      setDeleting(false)
+    }
+  }
+
+  const inpStyle = (focused) => ({
+    width: '100%', padding: '9px 12px',
+    background: C.input,
+    border: `1px solid ${focused ? C.electric + '99' : C.borderGold}`,
+    color: C.text, fontSize: '13px', fontFamily: 'inherit',
+    outline: 'none', boxSizing: 'border-box',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    boxShadow: focused ? `0 0 12px rgba(56,189,248,0.1)` : 'none',
+  })
+
+  function FInput({ style, ...props }) {
+    const [f, setF] = useState(false)
+    return <input {...props} onFocus={e => { setF(true); props.onFocus?.(e) }} onBlur={e => { setF(false); props.onBlur?.(e) }} style={{ ...inpStyle(f), ...style }} />
+  }
+  function FSelect({ children, style, ...props }) {
+    const [f, setF] = useState(false)
+    return <select {...props} onFocus={() => setF(true)} onBlur={() => setF(false)} style={{ ...inpStyle(f), cursor: 'pointer', ...style }}>{children}</select>
+  }
+  function FTextarea({ style, ...props }) {
+    const [f, setF] = useState(false)
+    return <textarea {...props} onFocus={() => setF(true)} onBlur={() => setF(false)} style={{ ...inpStyle(f), resize: 'vertical', minHeight: '80px', ...style }} />
+  }
+
+  const lbl = { fontSize: '10px', letterSpacing: '0.25em', color: C.textMuted, textTransform: 'uppercase', fontFamily: '"Cinzel", serif', marginBottom: '6px', display: 'block' }
+
   return (
-    <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap' }}>
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(5,10,20,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+    >
+      <div style={{ background: C.surface, border: `1px solid ${C.borderGold}`, width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 0 80px rgba(0,0,0,0.8)' }}>
+        <Corners color={C.goldBright} size={12} opacity={0.4} />
 
-      {/* Left — cover */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flexShrink: 0 }}>
-        <div style={{
-          width: '160px', height: '230px',
-          background: C.surface,
-          border: `1px solid ${C.borderGold}`,
-          overflow: 'hidden', position: 'relative',
-        }}>
-          <Corners color={C.gold} size={10} opacity={0.4} />
-          {coverSrc
-            ? <img src={coverSrc} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>📺</div>
-          }
-        </div>
-        <Field label="Override Cover URL" rune="ᛈ">
-          <FInput
-            placeholder="Paste image URL..."
-            value={coverOverride}
-            onChange={e => setCoverOver(e.target.value)}
-            style={{ width: '160px', fontSize: '11px', boxSizing: 'border-box' }}
-          />
-        </Field>
-      </div>
-
-      {/* Right — fields */}
-      <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-        <Field label="Title" rune="ᛏ">
-          <FInput value={form.title} onChange={e => set('title', e.target.value)} placeholder="Drama title" />
-        </Field>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-          <Field label="Type" rune="ᚦ">
-            <FSelect value={form.type} onChange={e => set('type', e.target.value)}>
-              <option>Kdrama</option><option>Cdrama</option><option>Jdrama</option>
-            </FSelect>
-          </Field>
-          <Field label="Format" rune="ᚠ">
-            <FSelect value={form.format} onChange={e => set('format', e.target.value)}>
-              <option>Series</option><option>Movie</option><option>Special</option>
-            </FSelect>
-          </Field>
-          <Field label="Status" rune="ᛊ">
-            <FSelect value={form.status} onChange={e => set('status', e.target.value)}>
-              <option>Watching</option><option>Completed</option><option>Dropped</option>
-              <option>Plan to Watch</option><option>On Hold</option>
-            </FSelect>
-          </Field>
+        {/* Header */}
+        <div style={{ padding: '20px 28px 16px', borderBottom: `1px solid ${C.borderGold}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: '"Cinzel", serif', fontSize: '14px', color: C.gold }}>ᛚ</span>
+            <span style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.goldBright, textTransform: 'uppercase', fontWeight: 700 }}>
+              {existingEntry ? 'Edit Entry' : 'Add to My List'}
+            </span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
+            onMouseEnter={e => e.currentTarget.style.color = C.text}
+            onMouseLeave={e => e.currentTarget.style.color = C.textDim}
+          >×</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
-          <Field label="Ep Current" rune="ᚹ">
-            <FInput type="number" min="0" value={form.episodes?.current ?? ''} onChange={e => setEp('current', e.target.value)} placeholder="0" />
-          </Field>
-          <Field label="Ep Total" rune="ᚹ">
-            <FInput type="number" min="0" value={form.episodes?.total ?? ''} onChange={e => setEp('total', e.target.value)} placeholder="—" />
-          </Field>
-          <Field label="Year" rune="ᚢ">
-            <FInput type="number" value={form.year ?? ''} onChange={e => set('year', e.target.value)} placeholder="2024" />
-          </Field>
-          <Field label="Rewatches" rune="ᚲ">
-            <FInput type="number" min="0" value={form.rewatchCount ?? 0} onChange={e => set('rewatchCount', Number(e.target.value))} />
-          </Field>
-        </div>
+        {/* Body */}
+        <div style={{ padding: '28px', display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <Field label="Date Started" rune="ᛞ">
-            <FInput type="date" value={form.dateStarted?.split('T')[0] ?? ''} onChange={e => set('dateStarted', e.target.value)} />
-          </Field>
-          <Field label="Date Completed" rune="ᛞ">
-            <FInput type="date" value={form.dateCompleted?.split('T')[0] ?? ''} onChange={e => set('dateCompleted', e.target.value)} />
-          </Field>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <Field label="Genres" rune="ᚷ">
-            <FInput value={genreInput} onChange={e => setGenreInput(e.target.value)} placeholder="Romance, Thriller..." />
-          </Field>
-          <Field label="Custom Tags" rune="ᚱ">
-            <FInput value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="Favourites, Rewatching..." />
-          </Field>
-        </div>
-
-        {/* Rating slider */}
-        <Field label="My Rating" rune="★">
-          <RatingSlider value={form.rating} onChange={v => set('rating', v)} />
-        </Field>
-
-        {/* Platforms */}
-        <Field label="Where to Watch" rune="ᛚ">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {(form.platforms || []).map((p, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '8px 12px',
-                background: C.input, border: `1px solid ${C.borderGold}`,
-              }}>
-                <span style={{ flex: 1, fontSize: '12px', color: C.text }}>{p.name}</span>
-                {p.url && <span style={{ fontSize: '10px', color: C.textDim, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.url}</span>}
-                <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}>×</button>
+          {/* Left — poster */}
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ maxWidth: '160px' }}>
+              <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
+                {tmdbData.name || tmdbData.original_name}
               </div>
-            ))}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <FInput placeholder="Platform" value={platName} onChange={e => setPlatName(e.target.value)} style={{ flex: 1 }} />
-              <FInput placeholder="URL (optional)" value={platUrl} onChange={e => setPlatUrl(e.target.value)} style={{ flex: 2 }} />
-              <button onClick={addPlat} style={{
-                fontFamily: '"Cinzel", serif', fontSize: '11px',
-                color: C.electric, background: C.electricSoft,
-                border: `1px solid ${C.electric}44`,
-                padding: '0 14px', cursor: 'pointer',
-                whiteSpace: 'nowrap', transition: 'all 0.2s',
-              }}>+ Add</button>
+              {year && <div style={{ fontSize: '11px', color: C.goldBright, fontFamily: '"Cinzel", serif', marginTop: '4px', letterSpacing: '0.1em' }}>{year}</div>}
+            </div>
+            <div style={{ width: '160px', height: '230px', background: C.bg, border: `1px solid ${C.borderGold}`, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+              <Corners color={C.gold} size={10} opacity={0.35} />
+              {coverSrc
+                ? <img src={coverSrc} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>📺</div>
+              }
+            </div>
+            <div>
+              <label style={lbl}>ᛈ Cover URL</label>
+              <FInput placeholder="Paste image URL..." value={coverOverride} onChange={e => setCover(e.target.value)} style={{ width: '160px', fontSize: '11px', boxSizing: 'border-box' }} />
             </div>
           </div>
-        </Field>
 
-        {/* Review */}
-        <Field label="Review / Notes" rune="ᚾ">
-          <FTextarea value={form.review} onChange={e => set('review', e.target.value)} placeholder="Your thoughts..." />
-        </Field>
+          {/* Right — fields */}
+          <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-        {error && (
-          <div style={{ fontSize: '12px', color: C.red, letterSpacing: '0.05em' }}>{error}</div>
-        )}
+            <div>
+              <label style={lbl}>ᛊ Status</label>
+              <FSelect value={form.status} onChange={e => set('status', e.target.value)}>
+                <option>Watching</option>
+                <option>Completed</option>
+                <option>Dropped</option>
+                <option>Plan to Watch</option>
+                <option>On Hold</option>
+              </FSelect>
+            </div>
 
-        {/* Save */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving || saved}
-            style={{
-              fontFamily: '"Cinzel", serif',
-              fontSize: '12px', letterSpacing: '0.25em',
-              color: saved ? C.green : C.electric,
-              background: saved ? C.greenSoft : C.electricSoft,
-              border: `1px solid ${saved ? C.green + '55' : C.electric + '55'}`,
-              padding: '13px 36px',
-              cursor: saving ? 'wait' : 'pointer',
-              transition: 'all 0.3s',
-            }}
-            onMouseEnter={e => { if (!saved && !saving) e.currentTarget.style.background = 'rgba(56,189,248,0.2)' }}
-            onMouseLeave={e => { if (!saved && !saving) e.currentTarget.style.background = C.electricSoft }}
-          >
-            {saved ? '✓ SAVED TO MIDGARD' : saving ? 'Saving...' : existingEntry ? 'UPDATE ENTRY' : 'ADD TO MY LIST'}
-          </button>
+            <div>
+              <label style={lbl}>ᚹ Episodes</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <FInput type="number" min="0" value={form.episodes?.current ?? ''} onChange={e => setEp('current', e.target.value)} placeholder="Current" style={{ flex: 1 }} />
+                <span style={{ color: C.textDim, fontSize: '14px', flexShrink: 0 }}>/</span>
+                <FInput type="number" min="0" value={form.episodes?.total ?? ''} onChange={e => setEp('total', e.target.value)} placeholder="Total" style={{ flex: 1 }} />
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>ᚲ Rewatch Count</label>
+              <FInput type="number" min="0" value={form.rewatchCount ?? 0} onChange={e => set('rewatchCount', Number(e.target.value))} style={{ maxWidth: '120px' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={lbl}>ᛞ Date Started</label>
+                <FInput type="date" value={form.dateStarted?.split('T')[0] ?? ''} onChange={e => set('dateStarted', e.target.value)} />
+              </div>
+              <div>
+                <label style={lbl}>ᛞ Date Completed</label>
+                <FInput type="date" value={form.dateCompleted?.split('T')[0] ?? ''} onChange={e => set('dateCompleted', e.target.value)} />
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>★ My Rating</label>
+              <RatingSlider value={form.rating} onChange={v => set('rating', v)} />
+            </div>
+
+            <div>
+              <label style={lbl}>ᛚ Where to Watch</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {(form.platforms || []).map((p, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', background: C.input, border: `1px solid ${C.borderGold}` }}>
+                    <span style={{ flex: 1, fontSize: '12px', color: C.text }}>{p.name}</span>
+                    {p.url && <span style={{ fontSize: '10px', color: C.textDim, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.url}</span>}
+                    <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}>×</button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <FInput placeholder="Platform" value={platName} onChange={e => setPlatName(e.target.value)} style={{ flex: 1 }} />
+                  <FInput placeholder="URL (optional)" value={platUrl} onChange={e => setPlatUrl(e.target.value)} style={{ flex: 2 }} />
+                  <button onClick={addPlat} style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>ᚾ Review / Notes</label>
+              <FTextarea value={form.review} onChange={e => set('review', e.target.value)} placeholder="Your thoughts on this drama..." />
+            </div>
+
+            {error && <div style={{ fontSize: '12px', color: C.red, letterSpacing: '0.05em' }}>{error}</div>}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 28px 24px', borderTop: `1px solid ${C.borderGold}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            {existingEntry && (
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
+                onMouseLeave={e => e.currentTarget.style.background = C.redSoft}
+              >{deleting ? 'Deleting...' : '✕ Delete'}</button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={onClose}
+              style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderGold}`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderGold }}
+            >Cancel</button>
+            <button onClick={handleSave} disabled={saving}
+              style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}55`, padding: '10px 28px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.background = 'rgba(56,189,248,0.2)' }}
+              onMouseLeave={e => { if (!saving) e.currentTarget.style.background = C.electricSoft }}
+            >{saving ? 'Saving...' : existingEntry ? '✓ Update' : '✓ Submit'}</button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-// ── Tab button ────────────────────────────────────────────────────────────────
-function Tab({ label, active, count, onClick }) {
+function CastCard({ person }) {
   const [hov, setHov] = useState(false)
   return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '11px', letterSpacing: '0.2em',
-        textTransform: 'uppercase',
-        color: active ? C.electric : hov ? C.text : C.textMuted,
-        background: active ? C.electricSoft : 'transparent',
-        border: 'none',
-        borderBottom: active ? `2px solid ${C.electric}` : '2px solid transparent',
-        padding: '10px 20px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        textShadow: active ? `0 0 12px ${C.electric}` : 'none',
-        display: 'flex', alignItems: 'center', gap: '8px',
-      }}
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ width: '100px', flexShrink: 0, transform: hov ? 'translateY(-4px)' : 'none', transition: 'transform 0.2s' }}
     >
-      {label}
-      {count !== undefined && (
-        <span style={{
-          fontSize: '10px', color: active ? C.electric : C.textDim,
-          border: `1px solid ${active ? C.electric + '44' : C.borderGold}`,
-          padding: '1px 6px',
-          background: active ? C.electricSoft : 'transparent',
-          transition: 'all 0.2s',
-        }}>{count}</span>
-      )}
-    </button>
+      <div style={{ width: '100px', height: '134px', background: C.surface, border: `1px solid ${hov ? C.electric + '66' : C.borderGold}`, overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s' }}>
+        {person.profile_path
+          ? <img src={`${IMG_BASE}/w185${person.profile_path}`} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>👤</div>
+        }
+        {hov && <Corners color={C.electric} size={8} opacity={0.5} />}
+      </div>
+      <div style={{ marginTop: '7px', fontSize: '11px', fontWeight: 600, color: hov ? C.text : C.textMuted, transition: 'color 0.2s', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{person.name}</div>
+      <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontStyle: 'italic' }}>{person.character}</div>
+    </div>
   )
 }
 
-// ── Main InfoPage ─────────────────────────────────────────────────────────────
+function ImageGrid({ images, type = 'backdrop' }) {
+  const [lightbox, setLightbox] = useState(null)
+  const [showAll, setShowAll]   = useState(false)
+  const [hov, setHov]           = useState(null)
+  const list    = images || []
+  const visible = showAll ? list : list.slice(0, 6)
+  const isBack  = type === 'backdrop'
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: isBack ? 'repeat(auto-fill, minmax(200px, 1fr))' : 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
+        {visible.map((img, i) => (
+          <div key={i} onClick={() => setLightbox(`${IMG_BASE}/original${img.file_path}`)}
+            onMouseEnter={() => setHov(i)} onMouseLeave={() => setHov(null)}
+            style={{ aspectRatio: isBack ? '16/9' : '2/3', overflow: 'hidden', cursor: 'pointer', border: `1px solid ${hov === i ? C.electric + '55' : C.borderGold}`, transition: 'all 0.2s', transform: hov === i ? 'scale(1.02)' : 'scale(1)' }}
+          >
+            <img src={`${IMG_BASE}/${isBack ? 'w300' : 'w154'}${img.file_path}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        ))}
+      </div>
+      {list.length > 6 && (
+        <button onClick={() => setShowAll(s => !s)}
+          style={{ marginTop: '14px', fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: 'transparent', border: `1px solid ${C.electric}44`, padding: '8px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.background = C.electricSoft}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >{showAll ? '▲ Show Less' : `▼ Show All ${list.length}`}</button>
+      )}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(5,10,20,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}>
+          <img src={lightbox} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', border: `1px solid ${C.borderGold}` }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TrailerSection({ videos }) {
+  const [active, setActive] = useState(null)
+  const trailers = (videos || []).filter(v => v.site === 'YouTube')
+  if (!trailers.length) return <div style={{ color: C.textDim, fontSize: '13px' }}>No trailers available</div>
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+        {trailers.map(v => (
+          <div key={v.key} onClick={() => setActive(active === v.key ? null : v.key)} style={{ flexShrink: 0, width: '190px', cursor: 'pointer' }}>
+            <div style={{ position: 'relative', height: '107px', border: `1px solid ${active === v.key ? C.electric + '88' : C.borderGold}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+              <img src={`https://img.youtube.com/vi/${v.key}/mqdefault.jpg`} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,13,26,0.45)' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: active === v.key ? C.electric : 'rgba(56,189,248,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', transition: 'background 0.2s' }}>▶</div>
+              </div>
+            </div>
+            <div style={{ marginTop: '6px', fontSize: '11px', color: active === v.key ? C.electric : C.textMuted, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{v.name}</div>
+          </div>
+        ))}
+      </div>
+      {active && (
+        <div style={{ marginTop: '14px', position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+          <iframe src={`https://www.youtube.com/embed/${active}?autoplay=1`}
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: `1px solid ${C.borderElec}` }}
+            allow="autoplay; encrypted-media" allowFullScreen title="trailer" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function InfoPage({ tmdbId, onBack }) {
-  const [data, setData]           = useState(null)
-  const [credits, setCredits]     = useState(null)
-  const [images, setImages]       = useState(null)
-  const [videos, setVideos]       = useState(null)
-  const [altTitles, setAltTitles] = useState([])
-  const [existing, setExisting]   = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [data, setData]         = useState(null)
+  const [credits, setCredits]   = useState(null)
+  const [images, setImages]     = useState(null)
+  const [videos, setVideos]     = useState(null)
+  const [keywords, setKeywords] = useState([])
+  const [existing, setExisting] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [showModal, setShowModal]     = useState(false)
   const [showAllCast, setShowAllCast] = useState(false)
-  const [showAltTitles, setShowAltTitles] = useState(false)
+  const [showTrailers, setShowTrailers] = useState(false)
+
+  const fetchExisting = async (d) => {
+    try {
+      const r = await axios.get(API)
+      const found = r.data.find(e => e.title?.toLowerCase() === (d.name || '').toLowerCase())
+      setExisting(found || null)
+    } catch {}
+  }
 
   useEffect(() => {
     if (!tmdbId) return
     setLoading(true)
-    setActiveTab('overview')
+    setShowModal(false)
     setShowAllCast(false)
+    setShowTrailers(false)
 
-    const headers = {}
     Promise.all([
       fetch(`${TMDB_BASE}/tv/${tmdbId}?api_key=${TMDB_KEY}`).then(r => r.json()),
       fetch(`${TMDB_BASE}/tv/${tmdbId}/credits?api_key=${TMDB_KEY}`).then(r => r.json()),
       fetch(`${TMDB_BASE}/tv/${tmdbId}/images?api_key=${TMDB_KEY}`).then(r => r.json()),
       fetch(`${TMDB_BASE}/tv/${tmdbId}/videos?api_key=${TMDB_KEY}`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/alternative_titles?api_key=${TMDB_KEY}`).then(r => r.json()),
-      axios.get(API).then(r => r.data),
-    ]).then(([d, c, img, v, alt, myList]) => {
+      fetch(`${TMDB_BASE}/tv/${tmdbId}/keywords?api_key=${TMDB_KEY}`).then(r => r.json()),
+    ]).then(async ([d, c, img, v, kw]) => {
       setData(d)
       setCredits(c)
       setImages(img)
       setVideos(v)
-      setAltTitles((alt.results || []).slice(0, 20))
-      const found = myList.find(entry =>
-        entry.title?.toLowerCase() === (d.name || '').toLowerCase()
-      )
-      setExisting(found || null)
+      setKeywords((kw.results || []).slice(0, 20))
+      await fetchExisting(d)
     }).catch(console.error)
     .finally(() => setLoading(false))
   }, [tmdbId])
 
   if (loading) return <Spinner />
-  if (!data)   return (
-    <div style={{ color: C.textDim, fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.15em' }}>
-      Failed to load data.
-    </div>
-  )
+  if (!data) return <div style={{ color: C.textDim, fontFamily: '"Cinzel", serif', fontSize: '13px' }}>Failed to load.</div>
 
   const type       = detectType(data)
   const tColor     = typeColor(type)
   const backdrop   = data.backdrop_path ? `${IMG_BASE}/w1280${data.backdrop_path}` : null
-  const poster     = data.poster_path   ? `${IMG_BASE}/w500${data.poster_path}`   : null
-  const year       = data.first_air_date ? data.first_air_date.split('-')[0] : '—'
+  const poster     = data.poster_path   ? `${IMG_BASE}/w500${data.poster_path}`    : null
+  const year       = data.first_air_date ? data.first_air_date.split('-')[0] : null
   const tmdbRating = data.vote_average ? data.vote_average.toFixed(1) : null
-  const tmdbVotes  = data.vote_count ? data.vote_count.toLocaleString() : null
   const runtime    = data.episode_run_time?.[0]
   const cast       = credits?.cast || []
   const backdrops  = images?.backdrops || []
-  const posters    = images?.posters || []
-  const trailers   = videos?.results || []
-  const visibleCast = showAllCast ? cast : cast.slice(0, 12)
+  const posters    = images?.posters   || []
+  const trailerCount = (videos?.results || []).filter(v => v.site === 'YouTube').length
+  const statusCfg  = existing ? (STATUS_CONFIG[existing.status] || {}) : null
+
+  const myRatingColor = (r) => {
+    if (!r) return C.textDim
+    if (r >= 8) return C.green
+    if (r >= 6) return C.goldBright
+    if (r >= 4) return C.ember
+    return C.red
+  }
 
   return (
-    <div>
-      <style>{`
-        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-      `}</style>
+    <div style={{ animation: 'fadeIn 0.4s ease' }}>
+      <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        style={{
-          fontFamily: '"Cinzel", serif',
-          fontSize: '11px', letterSpacing: '0.2em',
-          color: C.textMuted, background: 'transparent',
-          border: 'none', cursor: 'pointer',
-          padding: '0 0 20px 0',
-          transition: 'color 0.2s',
-          display: 'flex', alignItems: 'center', gap: '8px',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = C.electric}
-        onMouseLeave={e => e.currentTarget.style.color = C.textMuted}
-      >
-        ← Back to Search
-      </button>
+      {/* ── BACK ── */}
+      <div style={{ marginBottom: '36px' }}>
+        <button onClick={onBack}
+          style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.25em', color: C.textDim, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.color = C.electric}
+          onMouseLeave={e => e.currentTarget.style.color = C.textDim}
+        >← Back to Search</button>
+      </div>
 
-      {/* ── HERO SECTION ── */}
-      <div style={{
-        position: 'relative',
-        marginBottom: '48px',
-        animation: 'fadeIn 0.5s ease',
-      }}>
-        {/* Backdrop */}
+      {/* ── HERO ── */}
+      <div style={{ position: 'relative', marginBottom: '60px' }}>
         {backdrop && (
-          <div style={{
-            position: 'absolute', inset: 0, top: '-20px',
-            backgroundImage: `url(${backdrop})`,
-            backgroundSize: 'cover', backgroundPosition: 'center top',
-            opacity: 0.12,
-            filter: 'blur(2px)',
-            borderRadius: '2px',
-          }} />
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${backdrop})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)' }} />
         )}
 
-        {/* Hero content */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          display: 'flex', gap: '36px', flexWrap: 'wrap',
-          padding: backdrop ? '32px 0 48px' : '0 0 32px',
-        }}>
-          {/* Poster */}
-          <div style={{
-            flexShrink: 0,
-            width: '180px', height: '260px',
-            background: C.surface,
-            border: `1px solid ${tColor}44`,
-            overflow: 'hidden', position: 'relative',
-            boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px ${tColor}22`,
-          }}>
-            <Corners color={tColor} size={10} opacity={0.6} />
-            {poster
-              ? <img src={poster} alt={data.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '36px' }}>📺</div>
-            }
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '52px', alignItems: 'flex-start', flexWrap: 'wrap', padding: backdrop ? '36px 0 52px' : '0' }}>
+
+          {/* Poster + buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginLeft: '4%', flexShrink: 0 }}>
+            <div style={{ width: '230px', height: '335px', background: C.surface, border: `1px solid ${tColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${tColor}22, 0 0 50px ${tColor}0a` }}>
+              <Corners color={tColor} size={13} opacity={0.55} />
+              {poster
+                ? <img src={poster} alt={data.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '44px' }}>📺</div>
+              }
+            </div>
+
+            {/* Buttons */}
+            <div style={{ width: '230px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+              <button onClick={() => setShowTrailers(s => !s)}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: showTrailers ? C.bg : C.electric, background: showTrailers ? C.electric : C.electricSoft, border: `1px solid ${C.electric}66`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
+                onMouseEnter={e => { if (!showTrailers) e.currentTarget.style.background = 'rgba(56,189,248,0.18)' }}
+                onMouseLeave={e => { if (!showTrailers) e.currentTarget.style.background = showTrailers ? C.electric : C.electricSoft }}
+              >▶ Trailers {trailerCount > 0 && <span style={{ fontSize: '10px', opacity: 0.7 }}>({trailerCount})</span>}</button>
+
+              <button onClick={() => setShowModal(true)}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em', color: existing ? (statusCfg?.color || C.green) : C.goldBright, background: existing ? `${statusCfg?.color || C.green}15` : 'rgba(202,138,4,0.12)', border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                {existing ? <>{statusCfg?.icon} {existing.status}</> : <>+ Add to My List</>}
+              </button>
+            </div>
           </div>
 
           {/* Info */}
-          <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* Type + status badges */}
+            {/* 1. Badges */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Badge label={type} color={tColor} />
-              {data.status && <Badge label={data.status} color={data.status === 'Ended' || data.status === 'Canceled' ? C.textMuted : C.green} />}
-              {data.type && <Badge label={data.type === 'Scripted' ? 'Series' : data.type} color={C.textMuted} />}
+              <span style={{ fontSize: '10px', letterSpacing: '0.18em', color: tColor, padding: '5px 13px', border: `1px solid ${tColor}55`, background: tColor + '10', fontFamily: '"Cinzel", serif', fontWeight: 700 }}>{type}</span>
+              {data.status && <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: data.status === 'Ended' ? C.textMuted : C.green, padding: '5px 13px', border: `1px solid ${data.status === 'Ended' ? C.textDim + '44' : C.green + '44'}`, background: data.status === 'Ended' ? 'transparent' : C.greenSoft, fontFamily: '"Cinzel", serif' }}>{data.status}</span>}
             </div>
 
-            {/* Title */}
-            <h2 style={{
-              fontFamily: '"Cinzel", serif',
-              fontSize: 'clamp(22px, 3vw, 36px)',
-              fontWeight: 700, letterSpacing: '0.08em',
-              color: C.text, margin: 0,
-              textShadow: `0 0 40px ${tColor}33`,
-              lineHeight: 1.2,
-            }}>
-              {data.name}
-            </h2>
-
-            {/* Original title */}
-            {data.original_name && data.original_name !== data.name && (
-              <div style={{ fontSize: '14px', color: C.textMuted, letterSpacing: '0.05em', fontStyle: 'italic' }}>
-                {data.original_name}
-              </div>
-            )}
-
-            {/* Meta row */}
-            <div style={{
-              display: 'flex', gap: '20px', flexWrap: 'wrap',
-              fontSize: '12px', color: C.textMuted, letterSpacing: '0.08em',
-              alignItems: 'center',
-            }}>
-              {year !== '—' && <span style={{ color: C.gold + 'cc' }}>{year}</span>}
-              {data.number_of_seasons && (
-                <span>{data.number_of_seasons} Season{data.number_of_seasons > 1 ? 's' : ''}</span>
-              )}
-              {data.number_of_episodes && (
-                <span>{data.number_of_episodes} Episodes</span>
-              )}
-              {runtime && <span>{runtime} min/ep</span>}
-              {data.origin_country?.length > 0 && (
-                <span style={{ color: tColor + 'aa', fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.15em' }}>
-                  {data.origin_country.join(' · ')}
-                </span>
+            {/* 2. Title + year */}
+            <div>
+              <h2 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(26px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15, textShadow: `0 0 50px ${tColor}18` }}>
+                {data.name}
+                {year && <span style={{ fontSize: 'clamp(15px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>({year})</span>}
+              </h2>
+              {data.original_name && data.original_name !== data.name && (
+                <div style={{ fontSize: '14px', color: C.textMuted, marginTop: '8px', fontStyle: 'italic', letterSpacing: '0.04em' }}>{data.original_name}</div>
               )}
             </div>
 
-            {/* Genres */}
-            {data.genres?.length > 0 && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {data.genres.map(g => (
-                  <span key={g.id} style={{
-                    fontSize: '10px', letterSpacing: '0.1em',
-                    color: C.textMuted, fontFamily: '"Cinzel", serif',
-                    padding: '3px 10px',
-                    border: `1px solid ${C.borderGold}`,
-                    background: C.surface,
-                  }}>{g.name}</span>
-                ))}
-              </div>
-            )}
-
-            {/* TMDB Rating */}
-            {tmdbRating && parseFloat(tmdbRating) > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'baseline', gap: '4px',
-                }}>
-                  <span style={{
-                    fontFamily: '"Cinzel", serif',
-                    fontSize: '32px', fontWeight: 700,
-                    color: C.goldBright,
-                    textShadow: `0 0 20px ${C.gold}66`,
-                    lineHeight: 1,
-                  }}>★ {tmdbRating}</span>
+            {/* 3. Ratings */}
+            <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {tmdbRating && parseFloat(tmdbRating) > 0 && (
+                <div>
+                  <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ TMDB</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: C.goldBright, textShadow: `0 0 24px rgba(245,158,11,0.5)`, lineHeight: 1 }}>★ {tmdbRating}</span>
+                    <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
+                  </div>
+                  {data.vote_count > 0 && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px', letterSpacing: '0.05em' }}>{data.vote_count.toLocaleString()} votes</div>}
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>★ Mine</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
+                    {existing?.rating || '—'}
+                  </span>
                   <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
                 </div>
-                {tmdbVotes && (
-                  <span style={{ fontSize: '11px', color: C.textDim, letterSpacing: '0.05em' }}>
-                    {tmdbVotes} votes
-                  </span>
-                )}
+                {!existing && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px', letterSpacing: '0.05em' }}>Not in list</div>}
+              </div>
+            </div>
+
+            {/* 4. Seasons / Episodes / Runtime / My Progress */}
+            <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+              {[
+                data.number_of_seasons > 0 && { label: 'Seasons', value: data.number_of_seasons, rune: 'ᚢ' },
+                data.number_of_episodes > 0 && { label: 'Episodes', value: data.number_of_episodes, rune: 'ᚹ' },
+                runtime && { label: 'Runtime', value: `${runtime}m`, rune: 'ᛏ' },
+                existing?.episodes?.total > 0 && { label: 'My Progress', value: `${existing.episodes.current}/${existing.episodes.total}`, rune: 'ᛗ', color: tColor },
+              ].filter(Boolean).map(item => (
+                <div key={item.label}>
+                  <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '4px' }}>{item.rune} {item.label}</div>
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: item.color || C.text, fontFamily: '"Cinzel", serif' }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 5. Genres */}
+            {data.genres?.length > 0 && (
+              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+                {data.genres.map(g => (
+                  <span key={g.id} style={{ fontSize: '10px', letterSpacing: '0.12em', color: C.textMuted, padding: '5px 13px', border: `1px solid ${C.borderGold}`, background: C.surface, fontFamily: '"Cinzel", serif' }}>{g.name}</span>
+                ))}
               </div>
             )}
 
             {/* Networks */}
             {data.networks?.length > 0 && (
-              <div style={{ fontSize: '11px', color: C.textDim, letterSpacing: '0.05em' }}>
-                <span style={{ color: C.gold + '88', fontFamily: '"Cinzel", serif', marginRight: '8px' }}>ᚾ</span>
-                {data.networks.map(n => n.name).join(' · ')}
+              <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: C.gold + '77', fontFamily: '"Cinzel", serif', fontSize: '14px' }}>ᚾ</span>
+                <span style={{ color: C.textMuted }}>{data.networks.map(n => n.name).join(' · ')}</span>
               </div>
             )}
 
-            {/* My list status pill */}
+            {/* My saved data pills */}
             {existing && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                padding: '6px 14px',
-                background: statusColor(existing.status) + '18',
-                border: `1px solid ${statusColor(existing.status)}44`,
-                fontSize: '11px', letterSpacing: '0.15em',
-                color: statusColor(existing.status),
-                fontFamily: '"Cinzel", serif',
-                alignSelf: 'flex-start',
-              }}>
-                ✓ In My List — {existing.status}
-                {existing.rating && <span style={{ color: C.goldBright, marginLeft: '6px' }}>★ {existing.rating}</span>}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '2px' }}>
+                {existing.dateStarted && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᛞ</span>Started {existing.dateStarted.split('T')[0]}</div>}
+                {existing.dateCompleted && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᛞ</span>Completed {existing.dateCompleted.split('T')[0]}</div>}
+                {existing.rewatchCount > 0 && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᚲ</span>Rewatched {existing.rewatchCount}×</div>}
+                {existing.platforms?.length > 0 && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᛚ</span>{existing.platforms.map(p => p.name).join(', ')}</div>}
               </div>
             )}
           </div>
         </div>
-
-        {/* Synopsis */}
-        {data.overview && (
-          <div style={{
-            position: 'relative', zIndex: 1,
-            padding: '20px 24px',
-            background: 'rgba(15,24,41,0.7)',
-            border: `1px solid ${C.borderGold}`,
-            backdropFilter: 'blur(8px)',
-            marginTop: '8px',
-          }}>
-            <Corners color={C.gold} size={10} opacity={0.25} />
-            <div style={{
-              fontSize: '10px', letterSpacing: '0.3em',
-              color: C.gold + '88', fontFamily: '"Cinzel", serif',
-              textTransform: 'uppercase', marginBottom: '10px',
-            }}>ᛊ Synopsis</div>
-            <p style={{
-              fontSize: '14px', color: '#B8C4D8',
-              lineHeight: 1.75, margin: 0, letterSpacing: '0.02em',
-            }}>
-              {data.overview}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* ── TABS ── */}
-      <div style={{
-        display: 'flex', gap: '2px',
-        borderBottom: `1px solid ${C.borderGold}`,
-        marginBottom: '36px',
-      }}>
-        <Tab label="Overview"   active={activeTab === 'overview'}   onClick={() => setActiveTab('overview')} />
-        <Tab label="Cast"       active={activeTab === 'cast'}       count={cast.length} onClick={() => setActiveTab('cast')} />
-        <Tab label="Images"     active={activeTab === 'images'}     count={backdrops.length + posters.length} onClick={() => setActiveTab('images')} />
-        <Tab label="Trailers"   active={activeTab === 'trailers'}   count={trailers.filter(v => v.site === 'YouTube').length} onClick={() => setActiveTab('trailers')} />
-        <Tab label={existing ? 'Edit Entry' : 'Add to My List'} active={activeTab === 'myentry'} onClick={() => setActiveTab('myentry')} />
+      {/* ── TRAILERS (inline toggle) ── */}
+      {showTrailers && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="Trailers" rune="▶" right={`${trailerCount} available`} />
+          <TrailerSection videos={videos?.results} />
+        </div>
+      )}
+
+      {/* ── MY REVIEW ── */}
+      {existing?.review && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="My Review" rune="ᚾ" />
+          <div style={{ padding: '22px 26px', background: C.surface, border: `1px solid ${C.borderGold}`, position: 'relative' }}>
+            <Corners color={C.gold} size={10} opacity={0.2} />
+            <p style={{ fontSize: '14px', color: C.textMuted, lineHeight: 1.85, margin: 0, letterSpacing: '0.02em', fontStyle: 'italic' }}>"{existing.review}"</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── SYNOPSIS ── */}
+      {data.overview && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="Synopsis" rune="ᛊ" />
+          <div style={{ padding: '24px 28px', background: C.surface, border: `1px solid ${C.borderGold}`, position: 'relative' }}>
+            <Corners color={C.gold} size={10} opacity={0.2} />
+            <p style={{ fontSize: '15px', color: C.textMuted, lineHeight: 1.9, margin: 0, letterSpacing: '0.02em' }}>{data.overview}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── OVERVIEW ── */}
+      <div style={{ marginBottom: '56px' }}>
+        <SectionDivider title="Overview" rune="ᚱ" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+            {[
+              { label: 'Status',      value: data.status,                           rune: 'ᛊ' },
+              { label: 'First Aired', value: data.first_air_date,                   rune: 'ᛞ' },
+              { label: 'Last Aired',  value: data.last_air_date,                    rune: 'ᛞ' },
+              { label: 'Origin',      value: data.origin_country?.join(', '),       rune: 'ᚱ' },
+              { label: 'Language',    value: data.original_language?.toUpperCase(), rune: 'ᛚ' },
+              { label: 'Runtime',     value: runtime ? `${runtime} min/ep` : null,  rune: 'ᛏ' },
+            ].filter(r => r.value).map(row => (
+              <div key={row.label} style={{ padding: '14px 16px', background: C.surface, border: `1px solid ${C.borderGold}` }}>
+                <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  <span style={{ color: C.gold + '77', marginRight: '6px' }}>{row.rune}</span>{row.label}
+                </div>
+                <div style={{ fontSize: '13px', color: C.text, fontWeight: 600 }}>{row.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {data.seasons?.filter(s => s.season_number > 0).length > 0 && (
+            <div>
+              <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᚢ Seasons Breakdown</div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {data.seasons.filter(s => s.season_number > 0).map(season => (
+                  <div key={season.id} style={{ padding: '12px 16px', background: C.surface, border: `1px solid ${C.borderGold}`, minWidth: '110px', position: 'relative' }}>
+                    <Corners color={C.gold} size={7} opacity={0.15} />
+                    <div style={{ fontSize: '9px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', marginBottom: '4px' }}>Season {season.season_number}</div>
+                    <div style={{ fontSize: '17px', fontWeight: 700, color: C.text, fontFamily: '"Cinzel", serif' }}>{season.episode_count} <span style={{ fontSize: '10px', color: C.textDim, fontWeight: 400 }}>eps</span></div>
+                    {season.air_date && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px' }}>{season.air_date.split('-')[0]}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {keywords.length > 0 && (
+            <div>
+              <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᚷ Keywords</div>
+              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+                {keywords.map(k => (
+                  <span key={k.id} style={{ fontSize: '11px', color: C.textDim, padding: '4px 10px', border: `1px solid ${C.textDim}33`, background: C.surface, letterSpacing: '0.05em' }}>{k.name}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── TAB CONTENT ── */}
-      <div style={{ animation: 'fadeIn 0.3s ease' }} key={activeTab}>
-
-        {/* OVERVIEW TAB */}
-        {activeTab === 'overview' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-
-            {/* Quick info grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              gap: '12px',
-            }}>
-              {[
-                { label: 'Status',        value: data.status,                           rune: 'ᛊ' },
-                { label: 'First Aired',   value: data.first_air_date,                   rune: 'ᛞ' },
-                { label: 'Last Aired',    value: data.last_air_date,                    rune: 'ᛞ' },
-                { label: 'Seasons',       value: data.number_of_seasons,                rune: 'ᚢ' },
-                { label: 'Episodes',      value: data.number_of_episodes,               rune: 'ᚹ' },
-                { label: 'Ep Runtime',    value: runtime ? `${runtime} min` : null,     rune: 'ᛏ' },
-                { label: 'Origin',        value: data.origin_country?.join(', '),       rune: 'ᚱ' },
-                { label: 'Language',      value: data.original_language?.toUpperCase(), rune: 'ᛚ' },
-              ].filter(r => r.value).map(row => (
-                <div key={row.label} style={{
-                  padding: '14px 16px',
-                  background: C.surface,
-                  border: `1px solid ${C.borderGold}`,
-                  position: 'relative',
-                }}>
-                  <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
-                    <span style={{ color: C.gold + '66', marginRight: '6px' }}>{row.rune}</span>{row.label}
-                  </div>
-                  <div style={{ fontSize: '13px', color: C.text, fontWeight: 600 }}>{row.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Seasons breakdown */}
-            {data.seasons?.length > 0 && (
-              <div>
-                <SectionHeader title="Seasons" rune="ᚢ" />
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {data.seasons.filter(s => s.season_number > 0).map(season => (
-                    <div key={season.id} style={{
-                      padding: '12px 16px',
-                      background: C.surface,
-                      border: `1px solid ${C.borderGold}`,
-                      minWidth: '120px',
-                      position: 'relative',
-                    }}>
-                      <Corners color={C.gold} size={8} opacity={0.2} />
-                      <div style={{ fontSize: '10px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', marginBottom: '4px' }}>
-                        Season {season.season_number}
-                      </div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: C.text }}>{season.episode_count} eps</div>
-                      {season.air_date && (
-                        <div style={{ fontSize: '10px', color: C.textDim, marginTop: '4px' }}>
-                          {season.air_date.split('-')[0]}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Alternative titles */}
-            {altTitles.length > 0 && (
-              <div>
-                <SectionHeader title="Alternative Titles" rune="ᚨ" />
-                <div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {(showAltTitles ? altTitles : altTitles.slice(0, 6)).map((t, i) => (
-                      <span key={i} style={{
-                        fontSize: '12px', color: C.textMuted,
-                        padding: '4px 12px',
-                        border: `1px solid ${C.borderGold}`,
-                        background: C.surface,
-                        letterSpacing: '0.03em',
-                      }}>
-                        {t.title}
-                        {t.iso_3166_1 && <span style={{ fontSize: '10px', color: C.textDim, marginLeft: '6px' }}>({t.iso_3166_1})</span>}
-                      </span>
-                    ))}
-                  </div>
-                  {altTitles.length > 6 && (
-                    <button
-                      onClick={() => setShowAltTitles(s => !s)}
-                      style={{
-                        marginTop: '10px', fontFamily: '"Cinzel", serif',
-                        fontSize: '10px', letterSpacing: '0.15em',
-                        color: C.textDim, background: 'transparent',
-                        border: 'none', cursor: 'pointer', padding: 0,
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.color = C.electric}
-                      onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-                    >
-                      {showAltTitles ? '▲ Show Less' : `▼ Show All ${altTitles.length}`}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Top cast preview */}
-            {cast.length > 0 && (
-              <div>
-                <SectionHeader title="Top Cast" rune="ᛈ" />
-                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-                  {cast.slice(0, 8).map(p => <CastCard key={p.id} person={p} />)}
-                </div>
-                <button
-                  onClick={() => setActiveTab('cast')}
-                  style={{
-                    marginTop: '14px', fontFamily: '"Cinzel", serif',
-                    fontSize: '10px', letterSpacing: '0.2em',
-                    color: C.textDim, background: 'transparent',
-                    border: 'none', cursor: 'pointer', padding: 0,
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = C.electric}
-                  onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-                >
-                  View All {cast.length} Cast Members →
-                </button>
-              </div>
-            )}
+      {/* ── CAST ── */}
+      {cast.length > 0 && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="Cast" rune="ᛈ" right={`${cast.length} members`} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px 12px' }}>
+            {(showAllCast ? cast : cast.slice(0, 12)).map(p => <CastCard key={p.id} person={p} />)}
           </div>
-        )}
+          {cast.length > 12 && (
+            <button onClick={() => setShowAllCast(s => !s)}
+              style={{ marginTop: '22px', fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}44`, padding: '10px 24px', cursor: 'pointer', transition: 'all 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(56,189,248,0.2)'}
+              onMouseLeave={e => e.currentTarget.style.background = C.electricSoft}
+            >{showAllCast ? '▲ Show Less' : `▼ Show All ${cast.length} Cast Members`}</button>
+          )}
+        </div>
+      )}
 
-        {/* CAST TAB */}
-        {activeTab === 'cast' && (
-          <div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-              gap: '16px 12px',
-            }}>
-              {visibleCast.map(p => <CastCard key={p.id} person={p} />)}
-            </div>
-            {cast.length > 12 && (
-              <button
-                onClick={() => setShowAllCast(s => !s)}
-                style={{
-                  marginTop: '24px', fontFamily: '"Cinzel", serif',
-                  fontSize: '11px', letterSpacing: '0.2em',
-                  color: C.electric, background: C.electricSoft,
-                  border: `1px solid ${C.electric}44`,
-                  padding: '10px 24px', cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(56,189,248,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background = C.electricSoft}
-              >
-                {showAllCast ? '▲ Show Less' : `▼ Show All ${cast.length} Cast Members`}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* IMAGES TAB */}
-        {activeTab === 'images' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+      {/* ── IMAGES ── */}
+      {(backdrops.length > 0 || posters.length > 0) && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="Images" rune="ᛒ" right={`${backdrops.length + posters.length} total`} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
             {backdrops.length > 0 && (
               <div>
-                <SectionHeader title={`Backdrops (${backdrops.length})`} rune="ᛒ" />
+                <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>Backdrops <span style={{ color: C.electric + '88', marginLeft: '8px' }}>({backdrops.length})</span></div>
                 <ImageGrid images={backdrops} type="backdrop" />
               </div>
             )}
             {posters.length > 0 && (
               <div>
-                <SectionHeader title={`Posters (${posters.length})`} rune="ᛈ" />
+                <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>Posters <span style={{ color: C.electric + '88', marginLeft: '8px' }}>({posters.length})</span></div>
                 <ImageGrid images={posters} type="poster" />
               </div>
             )}
-            {backdrops.length === 0 && posters.length === 0 && (
-              <div style={{ color: C.textDim, fontSize: '13px', letterSpacing: '0.05em' }}>No images available</div>
-            )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* TRAILERS TAB */}
-        {activeTab === 'trailers' && (
-          <TrailerRow videos={videos?.results} />
-        )}
-
-        {/* MY ENTRY TAB */}
-        {activeTab === 'myentry' && (
-          <div>
-            <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.08em', lineHeight: 1.7 }}>
-                {existing
-                  ? <>Editing your existing entry. All fields pre-filled from your saved data.</>
-                  : <>Fields pre-filled from TMDB. Adjust anything before saving.</>
-                }
-              </div>
-            </div>
-            <MyEntryForm
-              tmdbData={data}
-              existingEntry={existing}
-              onSaved={() => {
-                // Refresh existing entry after save
-                axios.get(API).then(r => {
-                  const found = r.data.find(e =>
-                    e.title?.toLowerCase() === (data.name || '').toLowerCase()
-                  )
-                  setExisting(found || null)
-                })
-              }}
-            />
-          </div>
-        )}
-      </div>
+      {/* ── MODAL ── */}
+      {showModal && (
+        <AddToListModal
+          tmdbData={data}
+          existingEntry={existing}
+          onClose={() => setShowModal(false)}
+          onSaved={() => { setShowModal(false); fetchExisting(data) }}
+          onDeleted={() => { setShowModal(false); setExisting(null) }}
+        />
+      )}
     </div>
   )
 }
