@@ -49,14 +49,14 @@ const TYPE_COLOR = {
 }
 
 const COLUMNS = [
-  { key: 'index',     label: '#',          sortable: false, width: '44px' },
-  { key: 'cover',     label: '',           sortable: false, width: '72px' },
-  { key: 'title',     label: 'Title',      sortable: true,  width: 'auto', rune: 'ᛏ' },
-  { key: 'country',   label: 'Country',    sortable: true,  width: '130px', rune: 'ᚱ' },
-  { key: 'year',      label: 'Year',       sortable: true,  width: '80px',  rune: 'ᚢ' },
-  { key: 'createdAt', label: 'Date Added', sortable: true,  width: '120px', rune: 'ᛞ' },
-  { key: 'format',    label: 'Format',     sortable: true,  width: '90px',  rune: 'ᚠ' },
-  { key: 'rating',    label: 'My Score',   sortable: true,  width: '120px', rune: '★' },
+  { key: 'index',         label: '#',               sortable: false, width: '52px' },
+  { key: 'cover',         label: 'Poster',          sortable: false, width: '100px', rune: 'ᛈ' },
+  { key: 'title',         label: 'Title',           sortable: true,  width: 'auto',  rune: 'ᛏ' },
+  { key: 'country',       label: 'Country',         sortable: true,  width: '150px', rune: 'ᚱ' },
+  { key: 'year',          label: 'Year',            sortable: true,  width: '90px',  rune: 'ᚢ' },
+  { key: 'dateCompleted', label: 'Date Completed',  sortable: true,  width: '150px', rune: 'ᛞ' },
+  { key: 'format',        label: 'Format',          sortable: true,  width: '100px', rune: 'ᚠ' },
+  { key: 'rating',        label: 'My Score',        sortable: true,  width: '140px', rune: '★' },
 ]
 
 function getCountry(drama) {
@@ -71,16 +71,16 @@ function formatDate(iso) {
 
 function ScoreDisplay({ rating }) {
   if (!rating) return (
-    <span style={{ color: C.textDim, fontSize: '12px', fontFamily: '"Cinzel", serif' }}>—</span>
+    <span style={{ color: C.textDim, fontSize: '14px', fontFamily: '"Cinzel", serif' }}>—</span>
   )
   const color = rating >= 8 ? C.green : rating >= 6 ? C.goldBright : rating >= 4 ? C.ember : C.red
   const filled = Math.round(rating / 2)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-      <div style={{ display: 'flex', gap: '1px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: '2px' }}>
         {Array.from({ length: 5 }, (_, i) => (
           <span key={i} style={{
-            fontSize: '12px',
+            fontSize: '14px',
             color: i < filled ? color : C.textDim + '44',
             textShadow: i < filled ? `0 0 6px ${color}` : 'none',
           }}>★</span>
@@ -88,7 +88,7 @@ function ScoreDisplay({ rating }) {
       </div>
       <span style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '13px',
+        fontSize: '15px',
         fontWeight: 700,
         color,
         textShadow: `0 0 10px ${color}66`,
@@ -101,18 +101,18 @@ function SortIndicator({ priority, direction }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: '2px',
-      marginLeft: '6px', fontSize: '10px', color: C.electric,
+      marginLeft: '6px', fontSize: '11px', color: C.electric,
       fontFamily: '"Cinzel", serif',
     }}>
       {priority > 0 && (
         <span style={{
-          fontSize: '8px', background: C.electric, color: C.bg,
-          borderRadius: '50%', width: '13px', height: '13px',
+          fontSize: '9px', background: C.electric, color: C.bg,
+          borderRadius: '50%', width: '14px', height: '14px',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           fontWeight: 700,
         }}>{priority}</span>
       )}
-      <span style={{ fontSize: '12px' }}>{direction === 'asc' ? '↑' : '↓'}</span>
+      <span style={{ fontSize: '13px' }}>{direction === 'asc' ? '↑' : '↓'}</span>
     </span>
   )
 }
@@ -130,10 +130,10 @@ function HeaderCell({ col, sortKeys, onSort }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         width: col.width,
-        padding: '14px 16px',
+        padding: '16px 18px',
         textAlign: col.key === 'rating' ? 'center' : 'left',
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px',
+        fontSize: '11px',
         letterSpacing: '0.25em',
         fontWeight: 700,
         textTransform: 'uppercase',
@@ -141,7 +141,6 @@ function HeaderCell({ col, sortKeys, onSort }) {
         background: isActive
           ? `linear-gradient(180deg, ${C.electricSoft}, transparent)`
           : hovered && col.sortable ? C.surfaceHover : 'transparent',
-        // FIX: use individual border sides so borderBottom doesn't get overridden
         borderTop: 'none',
         borderLeft: 'none',
         borderRight: col.key !== 'rating' ? `1px solid ${C.borderGold}` : 'none',
@@ -153,11 +152,11 @@ function HeaderCell({ col, sortKeys, onSort }) {
         position: 'relative',
       }}
     >
-      <span style={{ color: C.gold + '66', marginRight: '6px', fontSize: '12px' }}>{col.rune}</span>
+      <span style={{ color: C.gold + '66', marginRight: '6px', fontSize: '13px' }}>{col.rune}</span>
       {col.label}
       {isActive && <SortIndicator priority={sortIndex + 1} direction={direction} />}
       {!isActive && col.sortable && hovered && (
-        <span style={{ marginLeft: '6px', fontSize: '11px', color: C.textDim, opacity: 0.5 }}>↕</span>
+        <span style={{ marginLeft: '6px', fontSize: '12px', color: C.textDim, opacity: 0.5 }}>↕</span>
       )}
     </th>
   )
@@ -168,7 +167,6 @@ function DramaRow({ drama, index, onNavigate }) {
   const sc = STATUS_COLOR[drama.status] || C.textMuted
   const tc = TYPE_COLOR[drama.type]    || C.textMuted
 
-  // Navigate to InfoPage — works whether tmdbId is a number or missing
   const goToInfo = () => {
     if (drama.tmdbId) {
       onNavigate('Info', drama.tmdbId)
@@ -195,18 +193,18 @@ function DramaRow({ drama, index, onNavigate }) {
       }}
     >
       {/* # */}
-      <td style={{ ...tdBase, padding: '0 16px', textAlign: 'center', width: '44px' }}>
+      <td style={{ ...tdBase, padding: '0 18px', textAlign: 'center', width: '52px' }}>
         <span style={{
           fontFamily: '"Cinzel", serif',
-          fontSize: '11px',
+          fontSize: '13px',
           color: C.textDim,
         }}>
           {index + 1}
         </span>
       </td>
 
-      {/* Cover — FIX: bigger image 54x76 */}
-      <td style={{ ...tdBase, padding: '6px 8px', width: '90px' }}>
+      {/* Poster */}
+      <td style={{ ...tdBase, padding: '8px 10px', width: '100px' }}>
         <div
           onClick={goToInfo}
           style={{
@@ -230,20 +228,20 @@ function DramaRow({ drama, index, onNavigate }) {
             : <div style={{
                 width: '100%', height: '100%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '16px', color: C.textDim,
+                fontSize: '20px', color: C.textDim,
                 background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
               }}>📺</div>
           }
         </div>
       </td>
 
-      {/* Title — FIX: onClick always fires, guard inside */}
-      <td style={{ ...tdBase, padding: '12px 16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {/* Title + status badge */}
+      <td style={{ ...tdBase, padding: '14px 18px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <span
             onClick={goToInfo}
             style={{
-              fontSize: '14px',
+              fontSize: '16px',
               fontWeight: 600,
               color: hovered ? C.electric : C.text,
               cursor: canNavigate ? 'pointer' : 'default',
@@ -256,65 +254,75 @@ function DramaRow({ drama, index, onNavigate }) {
           >
             {drama.title}
           </span>
+
           {!canNavigate && (
             <span style={{
-              fontSize: '9px', color: C.textDim + '88',
+              fontSize: '10px', color: C.textDim + '88',
               fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
             }}>
               (no TMDB link — re-add to enable)
             </span>
           )}
-          {drama.genres?.length > 0 && (
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              {drama.genres.slice(0, 3).map(g => (
-                <span key={g} style={{
-                  fontSize: '9px', letterSpacing: '0.08em',
-                  color: C.textDim, padding: '2px 6px',
-                  border: `1px solid ${C.borderGold}`,
-                  background: C.bg,
-                  fontFamily: '"Cinzel", serif',
-                }}>{g}</span>
-              ))}
-            </div>
-          )}
+
+          {/* Status badge replacing genre tags */}
+          <span style={{
+            fontSize: '11px',
+            letterSpacing: '0.12em',
+            color: sc,
+            padding: '4px 10px',
+            border: `1px solid ${sc}55`,
+            background: `${sc}10`,
+            fontFamily: '"Cinzel", serif',
+            whiteSpace: 'nowrap',
+            alignSelf: 'flex-start',
+          }}>
+            {drama.status}
+          </span>
         </div>
       </td>
 
       {/* Country */}
-      <td style={{ ...tdBase, padding: '12px 16px', width: '130px' }}>
+      <td style={{ ...tdBase, padding: '14px 18px', width: '150px' }}>
         <span style={{
-          fontSize: '12px', color: tc,
-          fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+          fontSize: '14px',
+          color: tc,
+          fontFamily: '"Cinzel", serif',
+          letterSpacing: '0.05em',
         }}>
           {getCountry(drama)}
         </span>
       </td>
 
       {/* Year */}
-      <td style={{ ...tdBase, padding: '12px 16px', width: '80px', textAlign: 'center' }}>
+      <td style={{ ...tdBase, padding: '14px 18px', width: '90px', textAlign: 'center' }}>
         <span style={{
           fontFamily: '"Cinzel", serif',
-          fontSize: '13px', color: C.textMuted,
+          fontSize: '15px',
+          color: C.textMuted,
         }}>
           {drama.year || '—'}
         </span>
       </td>
 
-      {/* Date Added */}
-      <td style={{ ...tdBase, padding: '12px 16px', width: '120px' }}>
+      {/* Date Completed */}
+      <td style={{ ...tdBase, padding: '14px 18px', width: '150px' }}>
         <span style={{
-          fontSize: '11px', color: C.textDim,
-          fontFamily: '"Cinzel", serif', letterSpacing: '0.03em',
+          fontSize: '13px',
+          color: drama.dateCompleted ? C.textMuted : C.textDim,
+          fontFamily: '"Cinzel", serif',
+          letterSpacing: '0.03em',
         }}>
-          {formatDate(drama.createdAt)}
+          {formatDate(drama.dateCompleted)}
         </span>
       </td>
 
       {/* Format */}
-      <td style={{ ...tdBase, padding: '12px 16px', width: '90px', textAlign: 'center' }}>
+      <td style={{ ...tdBase, padding: '14px 18px', width: '100px', textAlign: 'center' }}>
         <span style={{
-          fontSize: '10px', letterSpacing: '0.12em',
-          color: C.textMuted, padding: '3px 8px',
+          fontSize: '11px',
+          letterSpacing: '0.12em',
+          color: C.textMuted,
+          padding: '4px 10px',
           border: `1px solid ${C.borderGold}`,
           background: C.bg,
           fontFamily: '"Cinzel", serif',
@@ -324,8 +332,8 @@ function DramaRow({ drama, index, onNavigate }) {
         </span>
       </td>
 
-      {/* My Score — no borderRight on last column */}
-      <td style={{ ...tdBase, borderRight: 'none', padding: '12px 16px', width: '120px', textAlign: 'center' }}>
+      {/* My Score */}
+      <td style={{ ...tdBase, borderRight: 'none', padding: '14px 18px', width: '140px', textAlign: 'center' }}>
         <ScoreDisplay rating={drama.rating} />
       </td>
     </tr>
@@ -342,7 +350,7 @@ function EmptyState({ status, searchQuery }) {
             color: C.gold + '22', letterSpacing: '0.4em', marginBottom: '16px',
           }}>ᛗ</div>
           <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '12px',
+            fontFamily: '"Cinzel", serif', fontSize: '13px',
             letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase',
           }}>
             {searchQuery
@@ -358,7 +366,6 @@ function EmptyState({ status, searchQuery }) {
   )
 }
 
-// FIX: Status tab — split border shorthand to prevent borderBottom override
 function StatusTab({ label, count, active, onClick }) {
   const [hovered, setHovered] = useState(false)
   const color = STATUS_COLOR[label] || C.electric
@@ -372,14 +379,13 @@ function StatusTab({ label, count, active, onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px',
+        fontSize: '11px',
         letterSpacing: '0.2em',
         textTransform: 'uppercase',
         color: active ? activeColor : hovered ? C.text : C.textMuted,
         background: active
           ? `${activeColor}15`
           : hovered ? C.surfaceHover : 'transparent',
-        // FIX: individual border sides — no shorthand override
         borderTop:    `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderLeft:   `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderRight:  `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
@@ -394,10 +400,9 @@ function StatusTab({ label, count, active, onClick }) {
       }}
     >
       {label}
-      {counts => null /* counts rendered in parent */}
       {count > 0 && (
         <span style={{
-          fontSize: '9px',
+          fontSize: '10px',
           color: active ? activeColor : C.textDim,
           background: active ? `${activeColor}20` : C.surface,
           border: `1px solid ${active ? activeColor + '44' : C.borderGold}`,
@@ -465,8 +470,9 @@ export default function MyList({ onNavigate }) {
             aVal = getCountry(a); bVal = getCountry(b)
           } else if (key === 'rating') {
             aVal = a.rating ?? -1; bVal = b.rating ?? -1
-          } else if (key === 'createdAt') {
-            aVal = new Date(a.createdAt).getTime(); bVal = new Date(b.createdAt).getTime()
+          } else if (key === 'dateCompleted') {
+            aVal = a.dateCompleted ? new Date(a.dateCompleted).getTime() : 0
+            bVal = b.dateCompleted ? new Date(b.dateCompleted).getTime() : 0
           } else if (key === 'year') {
             aVal = a.year ?? 0; bVal = b.year ?? 0
           } else {
@@ -507,7 +513,7 @@ export default function MyList({ onNavigate }) {
           <span style={{
             position: 'absolute', left: '12px',
             color: focused ? C.electric : C.textDim,
-            fontSize: '14px', pointerEvents: 'none', transition: 'color 0.2s',
+            fontSize: '15px', pointerEvents: 'none', transition: 'color 0.2s',
           }}>⌕</span>
           <input
             placeholder="Filter by title..."
@@ -517,10 +523,10 @@ export default function MyList({ onNavigate }) {
             onBlur={() => setFocused(false)}
             style={{
               paddingLeft: '34px', paddingRight: '28px',
-              height: '38px', width: focused ? '220px' : '170px',
+              height: '40px', width: focused ? '230px' : '180px',
               background: C.input,
               border: `1px solid ${focused ? C.electric + '88' : C.borderGold}`,
-              color: C.text, fontSize: '12px',
+              color: C.text, fontSize: '13px',
               fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
               outline: 'none', transition: 'all 0.3s ease',
               boxShadow: focused ? `0 0 16px ${C.electricSoft}` : 'none',
@@ -532,7 +538,7 @@ export default function MyList({ onNavigate }) {
               style={{
                 position: 'absolute', right: '10px',
                 background: 'none', border: 'none',
-                color: C.textDim, cursor: 'pointer', fontSize: '14px', lineHeight: 1, padding: 0,
+                color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0,
               }}
               onMouseEnter={e => e.currentTarget.style.color = C.text}
               onMouseLeave={e => e.currentTarget.style.color = C.textDim}
@@ -550,12 +556,12 @@ export default function MyList({ onNavigate }) {
           {sortKeys.length > 0 && (
             <>
               <span style={{
-                fontSize: '10px', color: C.textDim,
+                fontSize: '11px', color: C.textDim,
                 fontFamily: '"Cinzel", serif', letterSpacing: '0.2em',
               }}>SORTED BY</span>
               {sortKeys.map((s, i) => (
                 <span key={s.key} style={{
-                  fontSize: '10px', color: C.electric,
+                  fontSize: '11px', color: C.electric,
                   fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
                   padding: '2px 8px',
                   border: `1px solid ${C.electric}44`,
@@ -567,7 +573,7 @@ export default function MyList({ onNavigate }) {
                     onClick={() => setSortKeys(prev => prev.filter((_, idx) => idx !== i))}
                     style={{
                       background: 'none', border: 'none', color: C.textDim,
-                      cursor: 'pointer', fontSize: '11px', padding: '0 0 0 2px', lineHeight: 1,
+                      cursor: 'pointer', fontSize: '12px', padding: '0 0 0 2px', lineHeight: 1,
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = C.red}
                     onMouseLeave={e => e.currentTarget.style.color = C.textDim}
@@ -578,7 +584,7 @@ export default function MyList({ onNavigate }) {
                 <button
                   onClick={() => setSortKeys([{ key: 'title', dir: 'asc' }])}
                   style={{
-                    fontSize: '9px', letterSpacing: '0.15em',
+                    fontSize: '10px', letterSpacing: '0.15em',
                     color: C.textDim, background: 'transparent',
                     border: `1px solid ${C.borderGold}`,
                     padding: '2px 8px', cursor: 'pointer',
@@ -592,7 +598,7 @@ export default function MyList({ onNavigate }) {
           )}
         </div>
         <span style={{
-          fontSize: '11px', color: C.textDim,
+          fontSize: '13px', color: C.textDim,
           fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
         }}>
           <span style={{ color: C.electric }}>{filtered.length}</span> entr{filtered.length !== 1 ? 'ies' : 'y'}
@@ -609,7 +615,7 @@ export default function MyList({ onNavigate }) {
       {loading ? (
         <div style={{
           padding: '64px', textAlign: 'center',
-          fontFamily: '"Cinzel", serif', fontSize: '12px',
+          fontFamily: '"Cinzel", serif', fontSize: '13px',
           letterSpacing: '0.3em', color: C.textDim,
         }}>
           Loading the realm...
