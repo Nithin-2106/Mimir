@@ -290,21 +290,43 @@ function HorizontalScroll({ children }) {
   )
 }
 
+// ── shared fetch helper ───────────────────────────────────────────────────────
+async function jikanFetch(url) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1200 * attempt))
+    try {
+      const res = await fetch(url)
+      if (res.status === 429) { await new Promise(r => setTimeout(r, 2000)); continue }
+      if (!res.ok) throw new Error(`${res.status}`)
+      const json = await res.json()
+      return json.data || []
+    } catch { if (attempt === 2) return [] }
+  }
+  return []
+}
+
+function getCurrentSeason() {
+  const m = new Date().getMonth()
+  const y = new Date().getFullYear()
+  const s = m < 3 ? 'winter' : m < 6 ? 'spring' : m < 9 ? 'summer' : 'fall'
+  return { year: y, season: s }
+}
+
+// ── 2. TRENDING ───────────────────────────────────────────────────────────────
 function TrendingSection({ onNavigate }) {
-  const [items, setItems]   = useState([])
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        await sleep(300)
-        const res = await fetch(`${JIKAN}/top/anime?filter=airing&limit=25`)
-        const data = await res.json()
-        setItems(data.data || [])
-      } catch { setItems([]) }
-      finally { setLoading(false) }
-    }
-    load()
+    jikanFetch(`${JIKAN}/top/anime?filter=airing&limit=25`)
+      .then(data => {
+        const valid = data.filter(i => i.images?.jpg?.image_url)
+        if (valid.length) { setItems(valid); setLoading(false); return }
+        const { year, season } = getCurrentSeason()
+        return jikanFetch(`${JIKAN}/seasons/${year}/${season}`)
+          .then(d2 => { setItems(d2.filter(i => i.images?.jpg?.image_url)); setLoading(false) })
+      })
+      .catch(() => setLoading(false))
   }, [])
 
   if (loading) return (
@@ -329,10 +351,145 @@ function TrendingSection({ onNavigate }) {
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Trending This Season" rune="ᚦ" count={items.length} />
       <HorizontalScroll>
-        {items.map(item => (
-          <TrendingCard key={item.mal_id} item={item} onNavigate={onNavigate} />
-        ))}
+        {items.map(item => <TrendingCard key={item.mal_id} item={item} onNavigate={onNavigate} />)}
       </HorizontalScroll>
+    </div>
+  )
+}
+
+// ── 5. RECENTLY RELEASED ─────────────────────────────────────────────────────
+function RecentlyReleasedSection({ onNavigate }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const { year, season } = getCurrentSeason()
+    // stagger so it doesn't fire at same time as Trending
+    const timer = setTimeout(() => {
+      jikanFetch(`${JIKAN}/seasons/${year}/${season}`)
+        .then(data => {
+          const valid = data
+            .filter(i => i.images?.jpg?.image_url)
+            .sort((a, b) => (b.members || 0) - (a.members || 0))
+          if (valid.length) { setItems(valid); setLoading(false); return }
+          return jikanFetch(`${JIKAN}/seasons/now`)
+            .then(d2 => { setItems(d2.filter(i => i.images?.jpg?.image_url)); setLoading(false) })
+        })
+        .catch(() => setLoading(false))
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (loading) return (
+    <div style={{ marginBottom: '52px' }}>
+      <SectionHeader title="Recently Released" rune="ᚾ" />
+      <div style={{ display: 'flex', gap: '14px' }}>
+        {Array(5).fill(0).map((_, i) => (
+          <div key={i} style={{
+            flexShrink: 0, width: '160px', height: '220px',
+            background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
+            backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+            border: `1px solid ${C.borderPrimary}`,
+          }} />
+        ))}
+      </div>
+    </div>
+  )
+
+  if (!items.length) return null
+
+  return (
+    <div style={{ marginBottom: '52px' }}>
+      <SectionHeader title="Recently Released" rune="ᚾ" count={items.length} />
+      <HorizontalScroll>
+        {items.map(item => <TrendingCard key={item.mal_id} item={item} onNavigate={onNavigate} />)}
+      </HorizontalScroll>
+    </div>
+  )
+}
+
+// ── 6. EXPLORE NEW ───────────────────────────────────────────────────────────
+function ExploreSection({ onNavigate }) {
+  const [pool, setPool] = useState([])
+  const [shown, setShown] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [spinning, setSpinning] = useState(false)
+  const shownIds = useRef(new Set())
+
+  function pick6(arr, excludeIds) {
+    const available = arr.filter(i => !excludeIds.has(i.mal_id))
+    const source = available.length >= 6 ? available : arr
+    return [...source].sort(() => Math.random() - 0.5).slice(0, 6)
+  }
+
+  useEffect(() => {
+    // stagger so it fires after Trending and Recently Released
+    const timer = setTimeout(() => {
+      jikanFetch(`${JIKAN}/top/anime?filter=bypopularity&limit=25`)
+        .then(data => {
+          const valid = data.filter(i => i.images?.jpg?.image_url)
+          setPool(valid)
+          const initial = pick6(valid, new Set())
+          shownIds.current = new Set(initial.map(i => i.mal_id))
+          setShown(initial)
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
+    }, 1600)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const refresh = () => {
+    if (!pool.length) return
+    setSpinning(true)
+    const next = pick6(pool, shownIds.current)
+    shownIds.current = new Set(next.map(i => i.mal_id))
+    setShown(next)
+    setTimeout(() => setSpinning(false), 400)
+  }
+
+  const RefreshButton = (
+    <button onClick={refresh} style={{
+      display: 'flex', alignItems: 'center', gap: '6px',
+      fontFamily: '"Cinzel", serif', fontSize: '10px', letterSpacing: '0.2em',
+      color: C.primary, background: 'transparent',
+      border: `1px solid ${C.primary}44`, padding: '6px 14px',
+      cursor: 'pointer', transition: 'all 0.2s',
+    }}
+      onMouseEnter={e => e.currentTarget.style.background = C.primarySoft}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <span style={{
+        display: 'inline-block',
+        transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)',
+        transition: 'transform 0.4s ease', fontSize: '13px',
+      }}>↻</span>
+      Refresh
+    </button>
+  )
+
+  return (
+    <div style={{ marginBottom: '52px' }}>
+      <SectionHeader title="Explore" rune="ᚱ" right={RefreshButton} />
+      {loading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px' }}>
+          {Array(6).fill(0).map((_, i) => (
+            <div key={i} style={{
+              height: '220px',
+              background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
+              backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+              border: `1px solid ${C.borderPrimary}`,
+            }} />
+          ))}
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px',
+          opacity: spinning ? 0.4 : 1, transition: 'opacity 0.2s',
+        }}>
+          {shown.map(item => <TrendingCard key={item.mal_id} item={item} onNavigate={onNavigate} />)}
+        </div>
+      )}
     </div>
   )
 }
@@ -708,150 +865,6 @@ function Top10Section({ onNavigate }) {
   )
 }
 
-// ── 5. RECENTLY RELEASED (Jikan) ──────────────────────────────────────────────
-function RecentlyReleasedSection({ onNavigate }) {
-  const [items, setItems]     = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        await sleep(600)
-        const res  = await fetch(`${JIKAN}/seasons/now?limit=25`)
-        const data = await res.json()
-        setItems(data.data || [])
-      } catch { setItems([]) }
-      finally { setLoading(false) }
-    }
-    load()
-  }, [])
-
-  if (loading) return (
-    <div style={{ marginBottom: '52px' }}>
-      <SectionHeader title="This Season" rune="ᚾ" />
-      <div style={{ display: 'flex', gap: '14px' }}>
-        {Array(5).fill(0).map((_, i) => (
-          <div key={i} style={{
-            flexShrink: 0, width: '160px', height: '220px',
-            background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-            backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-            border: `1px solid ${C.borderPrimary}`,
-          }} />
-        ))}
-      </div>
-    </div>
-  )
-
-  if (!items.length) return null
-
-  return (
-    <div style={{ marginBottom: '52px' }}>
-      <SectionHeader title="This Season" rune="ᚾ" count={items.length} />
-      <HorizontalScroll>
-        {items.map(item => (
-          <TrendingCard key={item.mal_id} item={item} onNavigate={onNavigate} />
-        ))}
-      </HorizontalScroll>
-    </div>
-  )
-}
-
-// ── 6. EXPLORE NEW ───────────────────────────────────────────────────────────
-function ExploreSection({ onNavigate }) {
-  const [pool, setPool]         = useState([])
-  const [shown, setShown]       = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [spinning, setSpinning] = useState(false)
-  const shownIds = useRef(new Set())
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        await sleep(900)
-        const pages = await Promise.allSettled([
-          fetch(`${JIKAN}/top/anime?filter=bypopularity&limit=25`).then(r => r.json()),
-          fetch(`${JIKAN}/top/anime?filter=favorite&limit=25`).then(r => r.json()),
-        ])
-        const seen = new Set()
-        const all = pages
-          .filter(p => p.status === 'fulfilled')
-          .flatMap(p => p.value.data || [])
-          .filter(item => {
-            if (seen.has(item.mal_id)) return false
-            seen.add(item.mal_id)
-            return item.images?.jpg?.image_url
-          })
-        setPool(all)
-        const initial = pick6(all, new Set())
-        shownIds.current = new Set(initial.map(i => i.mal_id))
-        setShown(initial)
-      } catch { }
-      finally { setLoading(false) }
-    }
-    load()
-  }, [])
-
-  function pick6(arr, excludeIds) {
-    const available = arr.filter(i => !excludeIds.has(i.mal_id))
-    const source = available.length >= 6 ? available : arr
-    return [...source].sort(() => Math.random() - 0.5).slice(0, 6)
-  }
-
-  const refresh = () => {
-    setSpinning(true)
-    const next = pick6(pool, shownIds.current)
-    shownIds.current = new Set(next.map(i => i.mal_id))
-    setShown(next)
-    setTimeout(() => setSpinning(false), 400)
-  }
-
-  const RefreshButton = (
-    <button onClick={refresh} style={{
-      display: 'flex', alignItems: 'center', gap: '6px',
-      fontFamily: '"Cinzel", serif', fontSize: '10px', letterSpacing: '0.2em',
-      color: C.primary, background: 'transparent',
-      border: `1px solid ${C.primary}44`, padding: '6px 14px',
-      cursor: 'pointer', transition: 'all 0.2s',
-    }}
-      onMouseEnter={e => e.currentTarget.style.background = C.primarySoft}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-    >
-      <span style={{
-        display: 'inline-block',
-        transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)',
-        transition: 'transform 0.4s ease', fontSize: '13px',
-      }}>↻</span>
-      Refresh
-    </button>
-  )
-
-  return (
-    <div style={{ marginBottom: '52px' }}>
-      <SectionHeader title="Explore" rune="ᚱ" right={RefreshButton} />
-      {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px' }}>
-          {Array(6).fill(0).map((_, i) => (
-            <div key={i} style={{
-              height: '220px',
-              background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-              backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-              border: `1px solid ${C.borderPrimary}`,
-            }} />
-          ))}
-        </div>
-      ) : (
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px',
-          opacity: spinning ? 0.4 : 1, transition: 'opacity 0.2s',
-        }}>
-          {shown.map(item => (
-            <TrendingCard key={item.mal_id} item={item} onNavigate={onNavigate} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ── 7. RECENTLY ADDED ─────────────────────────────────────────────────────────
 function RecentlyAddedCard({ anime, onNavigate }) {
