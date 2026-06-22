@@ -7,6 +7,7 @@ const platformSchema = new mongoose.Schema({
 
 const mangaSchema = new mongoose.Schema({
   title:        { type: String, required: true },
+  anilistId:    { type: Number, default: null },
   coverImage:   { type: String, default: '' },
   status:       { type: String, enum: ['Reading', 'Completed', 'Dropped', 'Plan to Read', 'On Hold'], required: true },
   type:         { type: String, enum: ['Manhwa', 'Manga', 'Manhua'], required: true },
