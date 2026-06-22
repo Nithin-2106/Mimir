@@ -316,7 +316,7 @@ function TrendingSection({ onNavigate }) {
 
   useEffect(() => {
     fetchTrending(25)
-      .then(data => setItems(data))
+      .then(data => setItems(data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin))))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -727,7 +727,7 @@ function RecentlyReleasedSection({ onNavigate }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchRecentlyReleased(25)
-        .then(data => setItems(data))
+        .then(data => setItems(data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin))))
         .catch(() => {})
         .finally(() => setLoading(false))
     }, 600)
@@ -780,8 +780,9 @@ function ExploreSection({ onNavigate }) {
     const timer = setTimeout(() => {
       fetchPopular(50)
         .then(data => {
-          setPool(data)
-          const initial = pick6(data, new Set())
+          const valid = data.filter(i => ['KR', 'CN'].includes(i.countryOfOrigin))
+          setPool(valid)
+          const initial = pick6(valid, new Set())
           shownIds.current = new Set(initial.map(i => i.id))
           setShown(initial)
           setLoading(false)
