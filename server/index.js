@@ -16,6 +16,7 @@ app.use('/api/manga', require('./routes/manga'));
 app.use('/api/drama', require('./routes/drama'));
 app.use('/api/top10', require('./routes/top10'));
 app.use('/api/animetop10', require('./routes/animetop10'));
+app.use('/api/mangatop10', require('./routes/mangatop10'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
