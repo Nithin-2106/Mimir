@@ -103,8 +103,9 @@ export async function searchManga(query) {
         media(
           search: $search
           type: MANGA
-          format_not_in: [NOVEL]
+          format_not_in: [NOVEL, MUSIC]
           sort: [SEARCH_MATCH, POPULARITY_DESC]
+          isAdult: false
         ) {
           ${MEDIA_FIELDS}
         }
@@ -172,6 +173,20 @@ export async function fetchRecentlyReleased(limit = 25) {
   `
   const data = await anilistFetch(q)
   return data?.Page?.media || []
+}
+
+// ── Hentai/adult content filter ───────────────────────────────────────────────
+const BLOCKED_TAGS = new Set([
+  'Hentai', 'Ecchi', 'Sexual Content', 'Explicit Sexual Content',
+  'Nudity', 'Pornography'
+])
+
+const BLOCKED_FORMATS = new Set(['HENTAI'])
+
+function isAdultContent(item) {
+  if (BLOCKED_FORMATS.has(item.format)) return true
+  const tags = item.tags || []
+  return tags.some(t => BLOCKED_TAGS.has(t.name))
 }
 
 // ── Single title detail (for InfoPage) ───────────────────────────────────────

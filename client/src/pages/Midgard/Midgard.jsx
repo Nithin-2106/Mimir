@@ -5,6 +5,7 @@ import InfoPage from './InfoPage'
 import Counter from '../../components/Counter'
 import MyList from './MyList'
 import Dashboard from './Dashboard'
+import BrowsePage from './BrowsePage'
 
 const C = {
   bg:           '#080D1A',
@@ -163,7 +164,7 @@ function SearchBar({ onSearch }) {
 // CHANGED: accepts onSearch prop; right section now has SearchBar + Yggdrasil button
 function Navbar({ activePage, onNavigate, onSearch }) {
   const navigate = useNavigate()
-  const links = ['Dashboard', 'My List']
+    const links = ['Dashboard', 'Browse', 'My List']
 
   return (
     <nav style={{
@@ -367,7 +368,8 @@ function Midgard() {
             textShadow: `0 0 40px ${C.electric}33`,
           }}>
             {/* CHANGED: show query in header when on search page */}
-            {activePage === 'Search' ? `SEARCH` : activePage === 'Info' ? 'DRAMA INFO' : activePage.toUpperCase()}
+          {activePage === 'Search' ? 'SEARCH' : activePage === 'Info' ? 'DRAMA INFO' : activePage === 'Browse' ? 'BROWSE' : activePage.toUpperCase()}
+
           </h1>
           {/* CHANGED: show query subtitle under header on search page */}
           {activePage === 'Search' && searchQuery && (
@@ -388,6 +390,7 @@ function Midgard() {
         </div>
 
         {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
+        {activePage === 'Browse' && <BrowsePage onNavigate={handleNavigate} />}
         {activePage === 'My List' && (
   <MyList onNavigate={handleNavigate} />
 )}
