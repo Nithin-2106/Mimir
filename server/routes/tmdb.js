@@ -3,6 +3,8 @@ const router = express.Router();
 const axios = require('axios');
 
 const TMDB_KEY = process.env.TMDB_KEY;
+console.log('TMDB_KEY loaded:', TMDB_KEY); // ADD THIS LINE
+
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 router.use(async (req, res) => {

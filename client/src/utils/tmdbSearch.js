@@ -1,7 +1,7 @@
 // client/src/utils/tmdbSearch.js
 // Robust TMDB drama search with fallback, scoring, and typo tolerance
 
-const BASE = 'http://localhost:5000/api/tmdb'
+const BASE = 'https://mimir-server-c459.onrender.com/api/tmdb'
 
 // ── Country / language allowlist ──────────────────────────────────────────────
 const ALLOWED_COUNTRIES  = new Set(['KR', 'CN', 'TW', 'HK', 'JP'])

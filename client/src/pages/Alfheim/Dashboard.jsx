@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import Counter from '../../components/Counter'
 
 const JIKAN   = 'https://api.jikan.moe/v4'
-const API     = 'http://localhost:5000/api/anime'
-const TOP10   = 'http://localhost:5000/api/animetop10'
+const API     = 'https://mimir-server-c459.onrender.com/api/anime'
+const TOP10   = 'https://mimir-server-c459.onrender.com/api/animetop10'
 
 const C = {
   bg:           '#050C10',

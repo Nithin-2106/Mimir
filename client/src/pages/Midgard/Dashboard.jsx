@@ -4,10 +4,10 @@ import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
-const TMDB_BASE = 'http://localhost:5000/api/tmdb'
+const TMDB_BASE = 'https://mimir-server-c459.onrender.com/api/tmdb'
 const IMG_BASE = 'https://image.tmdb.org/t/p'
-const API = 'http://localhost:5000/api/drama'
-const TOP10_API = 'http://localhost:5000/api/top10'
+const API = 'https://mimir-server-c459.onrender.com/api/drama'
+const TOP10_API = 'https://mimir-server-c459.onrender.com/api/top10'
 
 const C = {
   bg:           '#080D1A',

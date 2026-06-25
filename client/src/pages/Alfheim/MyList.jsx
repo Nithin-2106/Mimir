@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
-const API = 'http://localhost:5000/api/anime'
+const API = 'https://mimir-server-c459.onrender.com/api/anime'
 
 const C = {
   bg:           '#050C10',

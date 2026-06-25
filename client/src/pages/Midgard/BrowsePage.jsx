@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const TMDB_BASE = 'http://localhost:5000/api/tmdb'
+const TMDB_BASE = 'https://mimir-server-c459.onrender.com/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
 
 const C = {
