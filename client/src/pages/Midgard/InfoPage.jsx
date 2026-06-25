@@ -43,15 +43,16 @@ const STATUS_CONFIG = {
 
 function detectType(item) {
   const origin = (item.origin_country || []).map(c => c.toUpperCase())
-  if (origin.includes('KR')) return 'Korean'
-  if (origin.includes('CN') || origin.includes('TW') || origin.includes('HK')) return 'Chinese'
-  if (origin.includes('JP')) return 'Japanese'
-  return 'Korean'
+  if (origin.includes('KR')) return 'Kdrama'
+  if (origin.includes('CN') || origin.includes('TW') || origin.includes('HK')) return 'Cdrama'
+  if (origin.includes('JP')) return 'Jdrama'
+  return 'Kdrama'
 }
+
 function typeColor(type) {
-  if (type === 'Korean') return C.electric
-  if (type === 'Chinese') return C.violet
-  if (type === 'Japanese') return C.goldBright
+  if (type === 'Kdrama') return C.electric
+  if (type === 'Cdrama') return C.violet
+  if (type === 'Jdrama') return C.goldBright
   return C.electric
 }
 
