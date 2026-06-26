@@ -113,7 +113,7 @@ async function fetchPagesForCountry(country, sortMode, startPage, count) {
 
   const fetches = Array.from({ length: end - startPage + 1 }, (_, i) =>
     fetch(
-      `${TMDB_BASE}/discover/tv` +
+      `${TMDB_BASE}?path=discover/tv` +
       `?` +
       `&with_origin_country=${country}` +
       `&sort_by=${sortParam}` +

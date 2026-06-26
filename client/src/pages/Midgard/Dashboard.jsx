@@ -375,7 +375,7 @@ function TrendingSection({ onNavigate }) {
     const countries = ['KR', 'CN', 'JP', 'TW']
     const fetches = countries.flatMap(country =>
       [1, 2, 3].map(page =>
-        fetch(`${TMDB_BASE}/discover/tv?with_origin_country=${country}&sort_by=popularity.desc&page=${page}`)
+        fetch(`${TMDB_BASE}?path=discover/tv?with_origin_country=${country}&sort_by=popularity.desc&page=${page}`)
           .then(r => r.json())
           .then(d => d.results || [])
           .catch(() => [])
@@ -926,7 +926,7 @@ function RecentlyReleasedSection({ onNavigate }) {
     const countries = ['KR', 'CN', 'JP', 'TW']
     const fetches = countries.flatMap(country =>
       [1, 2].map(page =>
-        fetch(`${TMDB_BASE}/discover/tv?with_origin_country=${country}&first_air_date.gte=${threeMonthsAgo}&sort_by=first_air_date.desc&page=${page}`)
+        fetch(`${TMDB_BASE}?path=discover/tv?with_origin_country=${country}&first_air_date.gte=${threeMonthsAgo}&sort_by=first_air_date.desc&page=${page}`)
           .then(r => r.json())
           .then(d => d.results || [])
           .catch(() => [])
@@ -996,7 +996,7 @@ function ExploreSection({ onNavigate }) {
       ]
       const pages = await Promise.all(
         queries.flatMap(q => [1, 2].map(p =>
-          fetch(`${TMDB_BASE}/discover/tv?${q}&page=${p}`)
+          fetch(`${TMDB_BASE}?path=discover/tv?${q}&page=${p}`)
             .then(r => r.json())
             .then(d => d.results || [])
             .catch(() => [])

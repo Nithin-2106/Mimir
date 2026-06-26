@@ -684,11 +684,11 @@ export default function InfoPage({ tmdbId, onBack }) {
     setShowTrailers(false)
 
     Promise.all([
-      fetch(`${TMDB_BASE}/tv/${tmdbId}?`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/credits?`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/images?`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/videos?`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/keywords?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}?path=tv/${tmdbId}?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}?path=tv/${tmdbId}/credits?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}?path=tv/${tmdbId}/images?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}?path=tv/${tmdbId}/videos?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}?path=tv/${tmdbId}/keywords?`).then(r => r.json()),
     ]).then(async ([d, c, img, v, kw]) => {
       setData(d)
       setCredits(c)
