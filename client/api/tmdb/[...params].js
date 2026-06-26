@@ -1,16 +1,14 @@
 import axios from 'axios'
 
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   try {
-    const { path, ...query } = req.query
+    const { params, ...query } = req.query
 
-    // path is an array with catch-all routes e.g. ['tv', '123', 'credits']
-    const tmdbPath = Array.isArray(path) ? path.join('/') : path
+    const tmdbPath = Array.isArray(params) ? params.join('/') : params
 
     if (!tmdbPath) {
       return res.status(400).json({ message: 'No path provided' })
@@ -19,7 +17,6 @@ export default async function handler(req, res) {
     const tmdbKey = process.env.TMDB_KEY
 
     if (!tmdbKey) {
-      console.error('TMDB_KEY is not set')
       return res.status(500).json({ message: 'TMDB_KEY not configured' })
     }
 
@@ -36,7 +33,6 @@ export default async function handler(req, res) {
     return res.json(response.data)
 
   } catch (err) {
-    console.error('TMDB proxy error:', err.message)
     return res.status(err.response?.status || 500).json({
       message: err.response?.data?.status_message || err.message,
     })
