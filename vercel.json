@@ -1,13 +1,9 @@
 {
+  "rootDirectory": "client",
   "rewrites": [
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "memory": 1024
-    }
-  }
+  ]
 }

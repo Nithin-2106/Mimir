@@ -834,7 +834,7 @@ function Top10Section({ onNavigate }) {
   }
 
   try {
-    await axios.delete(`${TOP10}/${pos}`)
+    await axios.delete(`${TOP10_API}/${region}/${pos}`)
     load()
   } catch (err) {
     console.error(err)
