@@ -1,6 +1,6 @@
-import { connectDB } from '../../lib/mongodb.js'
-import Manga from '../../lib/models/Manga.js'
-import { requireAuth } from '../../lib/auth.js'
+import { connectDB } from '../_lib/mongodb.js'
+import Manga from '../_lib/models/Manga.js'
+import { requireAuth } from '../_lib/auth.js'
 
 export default async function handler(req, res) {
   await connectDB()

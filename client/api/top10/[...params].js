@@ -1,6 +1,6 @@
-import { connectDB } from '../../../lib/mongodb.js'
-import Top10 from '../../../lib/models/Top10.js'
-import { requireAuth } from '../../../lib/auth.js'
+import { connectDB } from '../../_lib/mongodb.js'
+import Top10 from '../../_lib/models/Top10.js'
+import { requireAuth } from '../../_lib/auth.js'
 
 const emptySlots = () =>
   Array.from({ length: 10 }, (_, i) => ({

@@ -1,5 +1,5 @@
-import { connectDB } from '../../lib/mongodb.js'
-import User from '../../lib/models/User.js'
+import { connectDB } from '../_lib/mongodb.js'
+import User from '../_lib/models/User.js'
 import jwt from 'jsonwebtoken'
 
 const signToken = (id) =>
