@@ -3,9 +3,9 @@ import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
-const TMDB_BASE = 'https://mimir-server-c459.onrender.com/api/tmdb'
+const TMDB_BASE = '/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
-const API       = 'https://mimir-server-c459.onrender.com/api/drama'
+const API       = '/api/drama'
 
 const C = {
   bg:           '#080D1A',

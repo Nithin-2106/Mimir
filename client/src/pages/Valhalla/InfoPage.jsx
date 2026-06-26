@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { fetchMangaDetail, detectMangaType, detectMangaFormat, getTitle, getYear, getCover, formatScore, formatStatus } from '../../utils/anilistSearch'
 
-const API = 'https://mimir-server-c459.onrender.com/api/manga'
+const API = '/api/manga'
 const C = {
   bg:           '#0A0810',
   surface:      '#120F1E',

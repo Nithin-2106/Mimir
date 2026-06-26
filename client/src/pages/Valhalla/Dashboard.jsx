@@ -17,8 +17,8 @@ import {
   formatStatus,
 } from '../../utils/anilistSearch'
 
-const API      = 'https://mimir-server-c459.onrender.com/api/manga'
-const TOP10    = 'https://mimir-server-c459.onrender.com/api/mangatop10'
+const API      = '/api/manga'
+const TOP10    = '/api/mangatop10'
 
 const C = {
   bg:           '#0A0810',

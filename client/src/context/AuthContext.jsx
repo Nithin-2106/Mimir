@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('mimir_token')
     if (!token) { setLoading(false); return }
 
-    axios.get('https://mimir-server-c459.onrender.com/api/auth/me', {
+    axios.get('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => setUser(r.data))

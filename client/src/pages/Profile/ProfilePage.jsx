@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import axios from 'axios'
 
-const AUTH_API = 'https://mimir-server-c459.onrender.com/api/auth'
+const AUTH_API = '/api/auth'
 
 const C = {
   bg:           '#07080F',

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 const JIKAN = 'https://api.jikan.moe/v4'
-const API   = 'https://mimir-server-c459.onrender.com/api/anime'
+const API   = '/api/anime'
+
 const C = {
   bg:           '#050C10',
   surface:      '#0A1A20',

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import axios from 'axios'
 
-const API = 'https://mimir-server-c459.onrender.com/api/drama'
+const API = '/api/drama'
 
 const C = {
   bg:           '#080D1A',
