@@ -1,21 +1,44 @@
 import axios from 'axios'
 
 export default async function handler(req, res) {
-  const { path, ...query } = req.query
-
-  const tmdbPath = Array.isArray(path) ? path.join('/') : path
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  if (req.method === 'OPTIONS') return res.status(200).end()
 
   try {
-    const response = await axios.get(`https://api.themoviedb.org/3/${tmdbPath}`, {
+    const { path, ...query } = req.query
+
+    // path is an array with catch-all routes e.g. ['tv', '123', 'credits']
+    const tmdbPath = Array.isArray(path) ? path.join('/') : path
+
+    if (!tmdbPath) {
+      return res.status(400).json({ message: 'No path provided' })
+    }
+
+    const tmdbKey = process.env.TMDB_KEY
+
+    if (!tmdbKey) {
+      console.error('TMDB_KEY is not set')
+      return res.status(500).json({ message: 'TMDB_KEY not configured' })
+    }
+
+    const url = `https://api.themoviedb.org/3/${tmdbPath}`
+
+    const response = await axios.get(url, {
       params: {
         ...query,
-        api_key: process.env.TMDB_KEY,
+        api_key: tmdbKey,
       },
+      timeout: 10000,
     })
-    res.json(response.data)
+
+    return res.json(response.data)
+
   } catch (err) {
-    res.status(err.response?.status || 500).json({
-      message: err.response?.data || err.message,
+    console.error('TMDB proxy error:', err.message)
+    return res.status(err.response?.status || 500).json({
+      message: err.response?.data?.status_message || err.message,
     })
   }
 }
