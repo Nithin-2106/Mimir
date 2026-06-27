@@ -1,7 +1,4 @@
 import { connectDB } from '../_lib/mongodb.js'
-console.log(req.method);
-console.log(req.url);
-console.log(req.query);
 import Top10 from '../_lib/models/Top10.js'
 import { requireAuth } from '../_lib/auth.js'
 
@@ -11,6 +8,9 @@ const emptySlots = () =>
   }))
 
 export default async function handler(req, res) {
+  console.log(req.method);
+  console.log(req.url);
+  console.log(req.query);
   await connectDB()
   const { user, error, status } = await requireAuth(req)
   if (error) return res.status(status).json({ message: error })
