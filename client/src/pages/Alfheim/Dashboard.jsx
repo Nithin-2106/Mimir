@@ -438,7 +438,7 @@ function ExploreSection({ onNavigate }) {
   useEffect(() => {
     // stagger so it fires after Trending and Recently Released
     const timer = setTimeout(() => {
-      jikanFetch(`${JIKAN}/top/anime?filter=bypopularity&limit=25`)
+      jikanFetch(`${JIKAN}/top/anime?filter=bypopularity&limit=50`)
         .then(data => {
           const valid = data.filter(i => i.images?.jpg?.image_url)
           setPool(valid)
