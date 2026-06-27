@@ -31,7 +31,7 @@ async function safeFetch(url, timeoutMs = 10000) {
 export async function searchAnime(query) {
   if (!query?.trim()) return []
   try {
-    await sleep(300)
+    await sleep(600)
     const data = await safeFetch(
       `${BASE}/anime?q=${encodeURIComponent(query.trim())}&limit=20&sfw=false`
     )

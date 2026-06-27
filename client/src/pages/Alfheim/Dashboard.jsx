@@ -436,21 +436,21 @@ function ExploreSection({ onNavigate }) {
   }
 
   useEffect(() => {
-    // stagger so it fires after Trending and Recently Released
-    const timer = setTimeout(() => {
-      jikanFetch(`${JIKAN}/top/anime?filter=bypopularity&limit=50`)
-        .then(data => {
-          const valid = data.filter(i => i.images?.jpg?.image_url)
-          setPool(valid)
-          const initial = pick6(valid, new Set())
-          shownIds.current = new Set(initial.map(i => i.mal_id))
-          setShown(initial)
-          setLoading(false)
-        })
-        .catch(() => setLoading(false))
-    }, 3200)
-    return () => clearTimeout(timer)
-  }, [])
+  const timer = setTimeout(async () => {
+    try {
+      const data = await jikanFetch(`${JIKAN}/top/anime?filter=bypopularity&page=2`)
+      const valid = data.filter(i => i.images?.jpg?.image_url)
+      setPool(valid)
+      const initial = pick6(valid, new Set())
+      shownIds.current = new Set(initial.map(i => i.mal_id))
+      setShown(initial)
+      setLoading(false)
+    } catch {
+      setLoading(false)
+    }
+  }, 1600)
+  return () => clearTimeout(timer)
+}, [])
 
   const refresh = () => {
     if (!pool.length) return
@@ -600,16 +600,14 @@ function Top10SearchModal({ position, onClose, onSaved }) {
   const [focused, setFocused] = useState(false)
 
   const search = async () => {
-    if (!query.trim()) return
-    setLoading(true)
-    try {
-      await sleep(300)
-      const res  = await fetch(`${JIKAN}/anime?q=${encodeURIComponent(query)}&limit=12&sfw=false`)
-      const data = await res.json()
-      setResults(data.data || [])
-    } catch { setResults([]) }
-    finally { setLoading(false) }
-  }
+  if (!query.trim()) return
+  setLoading(true)
+  try {
+    const data = await jikanFetch(`${JIKAN}/anime?q=${encodeURIComponent(query)}&limit=12&sfw=false`)
+    setResults(data || [])
+  } catch { setResults([]) }
+  finally { setLoading(false) }
+}
 
   const select = async (item) => {
     const format = item.type === 'Movie' ? 'Movie'
