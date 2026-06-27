@@ -316,7 +316,7 @@ function HorizontalScroll({ children }) {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', overflow: 'visible' }}>
       {/* Left arrow */}
       {canLeft && (
         <button onClick={() => scroll(-1)} style={{
@@ -340,6 +340,7 @@ function HorizontalScroll({ children }) {
         style={{
           display: 'flex', gap: '14px',
           overflowX: 'auto', paddingBottom: '12px',
+          paddingTop: '12px', 
           scrollbarWidth: 'none', msOverflowStyle: 'none',
         }}
         className="hide-scroll"

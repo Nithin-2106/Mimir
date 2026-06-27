@@ -217,38 +217,18 @@ function Navbar({ activePage, onNavigate, onSearch }) {
         ))}
       </div>
 
-      <ProfileIcon borderColor="rgba(167,139,250,0.35)" size={34} />
-
-
       {/* Right: search + home */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
-        <SearchBar onSearch={onSearch} />
-        <div style={{
-          fontFamily: '"Cinzel", serif', fontSize: '10px',
-          color: C.borderPrimary, userSelect: 'none', letterSpacing: '0.1em',
-        }}>᛭</div>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            fontFamily: '"Cinzel", serif', fontSize: '11px',
-            letterSpacing: '0.25em', color: C.textMuted,
-            background: 'transparent',
-            border: `1px solid ${C.borderPrimary}`,
-            padding: '8px 18px', cursor: 'pointer',
-            transition: 'all 0.3s ease',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = C.gold
-            e.currentTarget.style.borderColor = `${C.gold}88`
-            e.currentTarget.style.boxShadow = `0 0 16px ${C.goldSoft}`
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = C.textMuted
-            e.currentTarget.style.borderColor = C.borderPrimary
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        >ᛟ YGGDRASIL</button>
-      </div>
+  <SearchBar onSearch={onSearch} />
+  <ProfileIcon borderColor="rgba(167,139,250,0.35)" size={34} />
+  <div style={{ fontFamily: '"Cinzel", serif', fontSize: '10px', color: C.borderPrimary, userSelect: 'none', letterSpacing: '0.1em' }}>᛭</div>
+  <button
+    onClick={() => navigate('/')}
+    style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.25em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`, padding: '8px 18px', cursor: 'pointer', transition: 'all 0.3s ease' }}
+    onMouseEnter={e => { e.currentTarget.style.color = C.gold; e.currentTarget.style.borderColor = `${C.gold}88`; e.currentTarget.style.boxShadow = `0 0 16px ${C.goldSoft}` }}
+    onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderPrimary; e.currentTarget.style.boxShadow = 'none' }}
+  >ᛟ YGGDRASIL</button>
+</div>
     </nav>
   )
 }
@@ -260,42 +240,22 @@ export default function Valhalla() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMangaId, setSelectedMangaId] = useState(null)
 
-  // Replace with:
   const navigate = useNavigate()
 
   const handleNavigate = (page, payload = '') => {
     if (page === 'My List' && !user) { navigate('/profile'); return }
     if (page === 'Search') setSearchQuery(payload)
-    if (page === 'Info')   setSelectedDramaId(payload)
+    if (page === 'Info')   setSelectedMangaId(payload)
     setActivePage(page)
   }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" />
-
       <VegvisirWatermark />
-
-      {/* Primary glow — top left */}
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '450px', height: '450px',
-        background: `radial-gradient(ellipse at top left, ${C.primary}0f, transparent 70%)`,
-        pointerEvents: 'none', zIndex: 0,
-      }} />
-
-      {/* Crimson glow — bottom right */}
-      <div style={{
-        position: 'fixed', bottom: 0, right: 0, width: '450px', height: '450px',
-        background: `radial-gradient(ellipse at bottom right, ${C.crimson}0d, transparent 70%)`,
-        pointerEvents: 'none', zIndex: 0,
-      }} />
-
-      {/* Gold glow — bottom */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: '200px',
-        background: `linear-gradient(to top, ${C.gold}08, transparent)`,
-        pointerEvents: 'none', zIndex: 0,
-      }} />
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '450px', height: '450px', background: `radial-gradient(ellipse at top left, ${C.primary}0f, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
+      <div style={{ position: 'fixed', bottom: 0, right: 0, width: '450px', height: '450px', background: `radial-gradient(ellipse at bottom right, ${C.crimson}0d, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: '200px', background: `linear-gradient(to top, ${C.gold}08, transparent)`, pointerEvents: 'none', zIndex: 0 }} />
 
       <Navbar
         activePage={activePage}
@@ -303,51 +263,27 @@ export default function Valhalla() {
         onSearch={(q) => handleNavigate('Search', q)}
       />
 
-      <main style={{
-        position: 'relative', zIndex: 1,
-        maxWidth: '1200px', margin: '0 auto',
-        padding: '96px 36px 80px',
-      }}>
-        {/* Page header */}
+      <main style={{ position: 'relative', zIndex: 1, maxWidth: '1200px', margin: '0 auto', padding: '96px 36px 80px' }}>
         <div style={{ marginBottom: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '1px' }}>
             <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.primary + '66' }}>⚔</span>
-            <div style={{
-              fontSize: '10px', letterSpacing: '0.45em', color: C.textDim,
-              textTransform: 'uppercase', fontFamily: '"Cinzel", serif',
-            }}>
+            <div style={{ fontSize: '10px', letterSpacing: '0.45em', color: C.textDim, textTransform: 'uppercase', fontFamily: '"Cinzel", serif' }}>
               Hall of the Chosen · Manga
             </div>
           </div>
-          <h1 style={{
-            fontFamily: '"Cinzel", serif',
-            fontSize: 'clamp(22px, 3vw, 34px)',
-            fontWeight: 700, letterSpacing: '0.2em', color: C.text,
-            margin: 0,
-            textShadow: `0 0 40px ${C.primary}33`,
-          }}>
-            {activePage === 'Search' ? 'SEARCH'
-  : activePage === 'Info' ? 'ANIME INFO'
-  : activePage === 'Browse' ? 'BROWSE'
-  : activePage.toUpperCase()}
+          <h1 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(22px, 3vw, 34px)', fontWeight: 700, letterSpacing: '0.2em', color: C.text, margin: 0, textShadow: `0 0 40px ${C.primary}33` }}>
+            {activePage === 'Search' ? 'SEARCH' : activePage === 'Info' ? 'MANGA INFO' : activePage === 'Browse' ? 'BROWSE' : activePage.toUpperCase()}
           </h1>
           {activePage === 'Search' && searchQuery && (
-            <div style={{
-              fontSize: '12px', letterSpacing: '0.2em',
-              color: C.textMuted, marginTop: '6px',
-              fontFamily: '"Cinzel", serif',
-            }}>
+            <div style={{ fontSize: '12px', letterSpacing: '0.2em', color: C.textMuted, marginTop: '6px', fontFamily: '"Cinzel", serif' }}>
               ᛭ results for <span style={{ color: C.primary }}>"{searchQuery}"</span>
             </div>
           )}
-          <div style={{
-            height: '1px', marginTop: '16px',
-            background: `linear-gradient(to right, ${C.primary}88, ${C.crimson}44, transparent)`,
-          }} />
+          <div style={{ height: '1px', marginTop: '16px', background: `linear-gradient(to right, ${C.primary}88, ${C.crimson}44, transparent)` }} />
         </div>
 
         {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
-        {activePage === 'Browse' && <BrowsePage onNavigate={handleNavigate} />}
+        {activePage === 'Browse'    && <BrowsePage onNavigate={handleNavigate} />}
         {activePage === 'My List'   && <MyList onNavigate={handleNavigate} />}
         {activePage === 'Search'    && (
           <SearchPage

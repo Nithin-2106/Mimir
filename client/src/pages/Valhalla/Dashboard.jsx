@@ -744,7 +744,7 @@ function RecentlyReleasedSection({ onNavigate }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchRecentlyReleased(25)
+      fetchRecentlyReleased(50)
         .then(data => setItems(data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin))))
         .catch(() => {})
         .finally(() => setLoading(false))
@@ -796,7 +796,7 @@ function ExploreSection({ onNavigate }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchPopular(50)
+      fetchPopular(100)
         .then(data => {
           const valid = data.filter(i => ['KR', 'CN'].includes(i.countryOfOrigin))
           setPool(valid)
