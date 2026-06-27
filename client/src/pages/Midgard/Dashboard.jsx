@@ -537,20 +537,20 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
   setSaving(true);
 
   try {
-    await axios.put(`${TOP10_API}/${region}/${position}`, {
-      tmdbId: item.id,
-      title: item.name || item.original_name || "",
-      coverImage: item.poster_path
-        ? `${IMG_BASE}/w500${item.poster_path}`
-        : "",
-      year: item.first_air_date
-        ? parseInt(item.first_air_date.split("-")[0])
-        : null,
-      type: getDramaType(item),
-    });
+    const { data } = await axios.put(`${TOP10_API}/${region}/${position}`, {
+  tmdbId: item.id,
+  title: item.name || item.original_name || "",
+  coverImage: item.poster_path
+    ? `${IMG_BASE}/w500${item.poster_path}`
+    : "",
+  year: item.first_air_date
+    ? parseInt(item.first_air_date.split("-")[0])
+    : null,
+  type: getDramaType(item),
+});
 
-    onSaved();
-    onClose();
+onSaved(data.entries);
+onClose();
   } catch (err) {
     console.error(err);
   } finally {
@@ -926,11 +926,14 @@ function Top10Section({ onNavigate }) {
 
       {modalSlot !== null && (
         <Top10SearchModal
-          position={modalSlot}
-          region={region}
-          onClose={() => setModalSlot(null)}
-          onSaved={() => { setModalSlot(null); load(region) }}
-        />
+  position={modalSlot}
+  region={region}
+  onClose={() => setModalSlot(null)}
+  onSaved={(updatedEntries) => {
+    setEntries(updatedEntries);
+    setModalSlot(null);
+  }}
+/>
       )}
     </div>
   )
