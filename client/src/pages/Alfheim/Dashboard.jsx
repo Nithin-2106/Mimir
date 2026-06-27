@@ -6,7 +6,8 @@ import Counter from '../../components/Counter'
 
 const JIKAN   = 'https://api.jikan.moe/v4'
 const API     = '/api/anime'
-const TOP10 = '/api/animetop10/list'
+const TOP10_LIST = '/api/animetop10/list'
+const TOP10_SLOT = '/api/animetop10'
 
 const C = {
   bg:           '#050C10',
@@ -614,7 +615,7 @@ function Top10SearchModal({ position, onClose, onSaved }) {
       : item.type === 'OVA' ? 'OVA'
       : item.type === 'Special' ? 'Special' : 'Series'
     try {
-      await axios.put(`${TOP10}/${position}`, {
+      await axios.put(`${TOP10_SLOT}/${position}`, {
         malId:      item.mal_id,
         title:      item.title || '',
         coverImage: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
@@ -821,7 +822,7 @@ function Top10Section({ onNavigate }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res   = await axios.get(TOP10)
+      const res = await axios.get(TOP10_LIST)
       const slots = Array.from({ length: 10 }, (_, i) => {
         const found = res.data.entries?.find(e => e.position === i + 1)
         return found || { position: i + 1, malId: null, title: '', coverImage: '', year: null, format: '' }
@@ -841,7 +842,7 @@ function Top10Section({ onNavigate }) {
   }
 
   try {
-    await axios.delete(`${TOP10}/${pos}`)
+    await axios.delete(`${TOP10_SLOT}/${pos}`)
     load()
   } catch (err) {
     console.error(err)
