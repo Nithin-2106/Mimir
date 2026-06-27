@@ -26,6 +26,16 @@ const params = Array.isArray(rawParams)
 const region = params[0];
   const position = params[1] ? parseInt(params[1]) : null
 
+  console.log({
+  method: req.method,
+  url: req.url,
+  query: req.query,
+  rawParams,
+  params,
+  region,
+  position,
+});
+
   if (!region) return res.status(400).json({ message: 'Region required' })
 
   // GET /api/top10/[region]
